@@ -271,11 +271,7 @@
 
             <div id="overall-summary-card" class="card p-6 mb-10 fade-in">
                 <h2 class="text-xl font-bold text-gray-800 mb-4">学业总览: <span id="current-student-name-summary" class="text-blue-600"></span></h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div class="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
-                        <div class="font-semibold text-gray-600">累计总 GPA</div>
-                        <span id="overall-gpa-display" class="text-4xl font-extrabold text-green-600">N/A</span>
-                    </div>
+                <div class="grid grid-cols-1 gap-8">
                     <div class="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
                         <div class="font-semibold text-gray-600">平均学期总分</div>
                         <span id="overall-weighted-score-display" class="text-4xl font-extrabold text-blue-600">N/A</span>
@@ -353,16 +349,6 @@
                        </div>
                    </div>
                    <div class="space-y-4">
-                        <div class="flex justify-between items-center">
-                            <div class="font-semibold text-gray-600 flex items-center">学期 GPA
-                                <span class="ml-2 text-blue-500 cursor-pointer" onclick="document.getElementById('gpa-info-popup').style.display='flex'">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
-                                    </svg>
-                                </span>
-                            </div>
-                            <span class="semester-gpa-display text-3xl font-extrabold text-green-600">N/A</span>
-                        </div>
                         <div class="flex justify-between items-center">
                             <div class="font-semibold text-gray-600 semester-score-label">学期总分</div>
                             <span class="semester-weighted-score-display text-3xl font-extrabold text-blue-600">N/A</span>
@@ -547,7 +533,6 @@
                     cancelBtn: document.getElementById('confirm-modal-cancel-btn'),
                 },
                 overall: {
-                    gpa: document.getElementById('overall-gpa-display'),
                     score: document.getElementById('overall-weighted-score-display'),
                 },
                 userMenu: {
@@ -993,8 +978,6 @@
             // Calculation Logic
             function updateAllCalculations() {
                 if (!selectedStudentId) {
-                    ui.overall.gpa.textContent = 'N/A';
-                    ui.overall.gpa.className = 'text-4xl font-extrabold text-gray-500';
                     ui.overall.score.textContent = 'N/A';
                     return;
                 }
@@ -1043,16 +1026,11 @@
                 const semesterData = studentData.semesters[semesterIndex];
                 const isAverageMode = semesterData.calculationMode === 'average';
                 
-                let totalWeightForGpa = 0, totalQualityPoints = 0, semesterCalculatedScore = 0;
+                let semesterCalculatedScore = 0;
                 let simpleAverageScoreSum = 0, gradedCoursesCount = 0;
 
                 semesterData.courses.forEach(course => {
                     if (course.finalGrade !== undefined && course.finalGrade > 0) {
-                        const weight = isAverageMode ? 1 : (parseFloat(course.weight) || 0);
-                        if (weight > 0) {
-                            totalWeightForGpa += weight;
-                            totalQualityPoints += scoreToGpaPoint(course.finalGrade) * weight;
-                        }
                         simpleAverageScoreSum += course.finalGrade;
                         gradedCoursesCount++;
                     }
@@ -1061,16 +1039,9 @@
                 const scoreLabel = semesterEl.querySelector('.semester-score-label');
                 scoreLabel.textContent = isAverageMode ? '学期均分' : '学期总分';
                 
-                const gpaDisplay = semesterEl.querySelector('.semester-gpa-display');
                 const weightedScoreDisplay = semesterEl.querySelector('.semester-weighted-score-display');
                 const averageScoreDisplay = semesterEl.querySelector('.semester-average-score-display');
                 
-                if (totalWeightForGpa > 0) {
-                    gpaDisplay.textContent = (totalQualityPoints / totalWeightForGpa).toFixed(2);
-                } else {
-                    gpaDisplay.textContent = 'N/A';
-                }
-
                 if (isAverageMode) {
                     semesterCalculatedScore = gradedCoursesCount > 0 ? simpleAverageScoreSum / gradedCoursesCount : 0;
                 } else {
@@ -1096,13 +1067,10 @@
             function updateOverallCalculations() {
                 const studentData = localStudentsData.find(s => s.id === selectedStudentId);
                 if (!studentData || !Array.isArray(studentData.semesters)) {
-                    ui.overall.gpa.textContent = 'N/A';
-                    ui.overall.gpa.className = 'text-4xl font-extrabold text-gray-500';
                     ui.overall.score.textContent = 'N/A';
                     return;
                 }
                 
-                let overallTotalWeight = 0, overallTotalQualityPoints = 0;
                 let overallScoreSum = 0, validSemestersForScore = 0;
 
                 studentData.semesters.forEach(semester => {
@@ -1110,19 +1078,13 @@
                     let semesterIsValidForOverallScore = true;
                     let semesterTotalCourseWeight = 0;
 
-                    semester.courses.forEach(course => {
-                        const weight = isAverageMode ? 1 : (parseFloat(course.weight) || 0);
-                        if (course.finalGrade !== undefined && course.finalGrade > 0 && weight > 0) {
-                            overallTotalWeight += weight;
-                            overallTotalQualityPoints += scoreToGpaPoint(course.finalGrade) * weight;
-                        }
-                        if (!isAverageMode) {
+                    if (!isAverageMode) {
+                        semester.courses.forEach(course => {
                             semesterTotalCourseWeight += (parseFloat(course.weight) || 0);
+                        });
+                        if (Math.abs(semesterTotalCourseWeight - 100) > 0.1) {
+                            semesterIsValidForOverallScore = false;
                         }
-                    });
-                    
-                    if (!isAverageMode && Math.abs(semesterTotalCourseWeight - 100) > 0.1) {
-                        semesterIsValidForOverallScore = false;
                     }
                     
                     if (semesterIsValidForOverallScore && semester.semesterTotalScore && semester.semesterTotalScore > 0) {
@@ -1130,32 +1092,12 @@
                          validSemestersForScore++;
                     }
                 });
-                
-                if(overallTotalWeight > 0) {
-                    const gpaValue = (overallTotalQualityPoints / overallTotalWeight).toFixed(2);
-                    ui.overall.gpa.textContent = gpaValue;
-                    ui.overall.gpa.className = 'text-4xl font-extrabold';
-                    if (gpaValue >= 3.7) ui.overall.gpa.classList.add('score-excellent');
-                    else if (gpaValue >= 3.0) ui.overall.gpa.classList.add('score-good');
-                    else if (gpaValue >= 2.0) ui.overall.gpa.classList.add('score-average');
-                    else ui.overall.gpa.classList.add('score-poor');
-                } else {
-                    ui.overall.gpa.textContent = 'N/A';
-                    ui.overall.gpa.className = 'text-4xl font-extrabold text-gray-500';
-                }
 
                 if (validSemestersForScore > 0) {
                     ui.overall.score.textContent = (overallScoreSum / validSemestersForScore).toFixed(2);
                 } else {
                     ui.overall.score.textContent = 'N/A';
                 }
-            }
-
-            function scoreToGpaPoint(score) {
-                if (score >= 90) return 4.0; if (score >= 85) return 3.7; if (score >= 82) return 3.3;
-                if (score >= 78) return 3.0; if (score >= 75) return 2.7; if (score >= 72) return 2.3;
-                if (score >= 68) return 2.0; if (score >= 65) return 1.7; if (score >= 60) return 1.0;
-                return 0.0;
             }
 
             function updateCalendarEvents() {
