@@ -496,6 +496,17 @@
             document.getElementById('status-message').textContent = message;
         }
 
+        // --- Debounce Utility ---
+        let debounceTimer;
+        function debounce(func, delay) {
+            return function(...args) {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => {
+                    func.apply(this, args);
+                }, delay);
+            };
+        }
+
         // Firebase Initialization
         updateStatus('正在初始化 Firebase...');
         try {
@@ -583,9 +594,8 @@
                         right: 'dayGridMonth,timeGridWeek,listWeek'
                     },
                     events: [],
-                    locale: 'zh-cn', // Set locale to Chinese
+                    locale: 'zh-cn',
                     eventDidMount: function(info) {
-                        // Tooltip for events
                         info.el.title = `${info.event.extendedProps.studentName}\n${info.event.title}`;
                     }
                 });
@@ -626,7 +636,6 @@
                     ui.userAvatar.src = user.photoURL;
                     initializeCalendar();
                     setupStudentListener();
-                    
                 } else {
                     currentUser = null;
                     if (studentsUnsubscribe) studentsUnsubscribe();
@@ -696,7 +705,7 @@
                     selectedStudentId = link.dataset.id;
                     renderSidebarStudentList();
                     renderStudentContent();
-                    if (window.innerWidth < 768) { // On mobile, close sidebar after selection
+                    if (window.innerWidth < 768) {
                          ui.sidebar.classList.add('-translate-x-full');
                     }
                 }
@@ -711,7 +720,7 @@
                 ui.currentStudentNameSummary.textContent = student ? student.name : '未选择学生';
 
                 if (!student) {
-                    updateAllCalculations(); // This will clear the overall summary
+                    updateAllCalculations();
                     return;
                 };
                 
@@ -725,7 +734,7 @@
                 }
                 ui.studentContentContainer.appendChild(studentContent);
                 updateAllCalculations();
-                // Restore focus after re-render
+                
                 if (activeElPath) {
                     const newActiveEl = findElementByPath(activeElPath);
                     if (newActiveEl) {
@@ -855,6 +864,10 @@
             }
 
             // Data Manipulation (CRUD)
+            const debouncedUpdate = debounce((updatedData) => {
+                updateStudentData(updatedData);
+            }, 500);
+
             async function updateStudentData(studentDataToUpdate) {
                  if (!selectedStudentId || !currentUser) return;
                  const studentDocRef = doc(db, 'users', currentUser.uid, 'students', selectedStudentId);
@@ -949,8 +962,10 @@
                 if (!selectedStudentId) return;
                 const target = e.target;
                 if (!target.closest('.semester-section')) return;
-                let studentData = JSON.parse(JSON.stringify(localStudentsData.find(s => s.id === selectedStudentId)));
+                
+                let studentData = localStudentsData.find(s => s.id === selectedStudentId);
                 if (!studentData) return;
+
                 const semesterSection = target.closest('.semester-section');
                 const courseCard = target.closest('.course-card');
                 const assignmentRow = target.closest('.assignment-row');
@@ -959,6 +974,8 @@
                 if (target.classList.contains('calculation-mode-toggle')) {
                     const newMode = target.checked ? 'average' : 'weighted';
                     studentData.semesters[semesterIndex].calculationMode = newMode;
+                    // When mode changes, we need to re-render the semester to show/hide weight inputs
+                    renderStudentContent();
                 } else if (target.classList.contains('semester-name-input')) {
                     studentData.semesters[semesterIndex].name = target.value;
                 } else if (courseCard) {
@@ -978,7 +995,11 @@
                         if (target.classList.contains('course-weight-input')) courseData.weight = target.value;
                     }
                 }
-                updateStudentData({ semesters: studentData.semesters });
+                
+                // Instead of re-rendering, just update calculations locally
+                updateAllCalculations();
+                // Then, save to Firestore after a delay
+                debouncedUpdate({ semesters: studentData.semesters });
             });
 
             // Calculation Logic
@@ -1054,8 +1075,6 @@
 
                 const scoreLabel = semesterEl.querySelector('.semester-score-label');
                 scoreLabel.textContent = isAverageMode ? '学期均分' : '学期总分';
-                const courseWeightContainers = semesterEl.querySelectorAll('.course-weight-container');
-                courseWeightContainers.forEach(c => c.style.display = isAverageMode ? 'none' : 'block');
                 
                 const gpaDisplay = semesterEl.querySelector('.semester-gpa-display');
                 const weightedScoreDisplay = semesterEl.querySelector('.semester-weighted-score-display');
