@@ -165,7 +165,6 @@
                         <!-- GPA Tools Section -->
                         <div class="border-t border-gray-200 my-1"></div>
                         <div class="px-4 py-2 text-xs text-gray-500">大学GPA工具</div>
-                        <!-- MODIFIED: Added ID to this link -->
                         <a href="./leeds-gpa.html" id="leeds-gpa-link" class="flex items-center gap-x-3 text-gray-700 px-4 py-2 text-sm hover:bg-gray-100" role="menuitem">
                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor"><path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L9 9.61V16a1 1 0 001 1h2a1 1 0 001-1v-6.39l6.394-2.69a1 1 0 000-1.84l-7-3zM10 8L3 5.39 10 3l7 2.39L10 8z" /></svg>
                            <span>利兹大学 (UoL)</span>
@@ -468,7 +467,6 @@
                 sidebarToggle: document.getElementById('sidebar-toggle'),
                 sidebarStudentList: document.getElementById('sidebar-student-list'),
                 currentStudentNameSummary: document.getElementById('current-student-name-summary'),
-                helpBtn: document.getElementById('help-btn'),
                 confirmModal: {
                     el: document.getElementById('confirm-modal'),
                     title: document.getElementById('confirm-modal-title'),
@@ -486,8 +484,9 @@
                     exportXlsx: document.getElementById('export-xlsx'),
                     clearAllData: document.getElementById('clear-all-data'),
                     logoutBtn: document.getElementById('logout-btn'),
-                    // MODIFIED: Added a reference to the link
                     leedsGpaLink: document.getElementById('leeds-gpa-link'),
+                    // MODIFIED: Added a reference to the help button
+                    helpBtn: document.getElementById('help-btn'),
                 }
             };
 
@@ -572,11 +571,15 @@
                 signOut(auth).catch(err => showError('登出失败', err.message))
             });
             
-            // MODIFIED: Added a specific event listener for the GPA link
             ui.userMenu.leedsGpaLink.addEventListener('click', (e) => {
-                e.preventDefault(); // Prevent the default link behavior
-                // Explicitly open the link's href in a new tab
+                e.preventDefault(); 
                 window.open(e.currentTarget.href, '_blank'); 
+            });
+
+            // MODIFIED: Added a specific event listener for the Help button
+            ui.userMenu.helpBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                document.getElementById('gpa-info-popup').style.display = 'flex';
             });
 
 
