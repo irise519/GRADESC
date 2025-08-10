@@ -82,6 +82,62 @@
         .fc-daygrid-event-dot {
             border-color: var(--fc-event-border-color, #fff) !important;
         }
+
+        /* Toggle Switch */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 110px;
+            height: 34px;
+        }
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .toggle-slider {
+            background-color: #2563eb;
+        }
+        input:checked + .toggle-slider:before {
+            transform: translateX(76px);
+        }
+        .toggle-slider:after {
+            content: '加权模式';
+            color: white;
+            display: block;
+            position: absolute;
+            transform: translate(-50%,-50%);
+            top: 50%;
+            left: 45%;
+            font-size: 10px;
+            font-family: sans-serif;
+        }
+        input:checked + .toggle-slider:after {
+            content: '均分模式';
+             left: 55%;
+        }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -257,7 +313,16 @@
                 </div>
                 <div class="courses-container grid grid-cols-1 gap-8"></div>
                 <div class="mt-8 p-6 bg-gray-50 rounded-lg">
-                   <h3 class="text-xl font-bold text-gray-800 mb-4">学期总结</h3>
+                   <div class="flex justify-between items-start mb-4">
+                       <h3 class="text-xl font-bold text-gray-800">学期总结</h3>
+                       <div class="flex flex-col items-end">
+                            <span class="text-xs text-gray-500 mb-1">计算模式</span>
+                            <label class="toggle-switch">
+                               <input type="checkbox" class="calculation-mode-toggle">
+                               <span class="toggle-slider"></span>
+                            </label>
+                       </div>
+                   </div>
                    <div class="space-y-4">
                         <div class="flex justify-between items-center">
                             <div class="font-semibold text-gray-600 flex items-center">学期 GPA
@@ -270,8 +335,12 @@
                             <span class="semester-gpa-display text-3xl font-extrabold text-green-600">N/A</span>
                         </div>
                         <div class="flex justify-between items-center">
-                            <div class="font-semibold text-gray-600">学期总分</div>
+                            <div class="font-semibold text-gray-600 semester-score-label">学期总分</div>
                             <span class="semester-weighted-score-display text-3xl font-extrabold text-blue-600">N/A</span>
+                        </div>
+                        <div class="flex justify-between items-center border-t pt-4 border-gray-200">
+                            <div class="font-semibold text-gray-600">学期均分</div>
+                            <span class="semester-average-score-display text-3xl font-extrabold text-indigo-600">N/A</span>
                         </div>
                    </div>
                 </div>
@@ -288,7 +357,7 @@
                     </button>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                    <div>
+                    <div class="course-weight-container">
                         <label class="text-sm font-medium text-gray-500">学期总分权重(%)</label>
                         <input type="number" min="0" step="0.5" placeholder="20" class="course-weight-input form-input w-full p-2 mt-1 rounded-md">
                     </div>
@@ -687,6 +756,12 @@
                 const semesterTemplate = document.getElementById('semester-template').content.cloneNode(true);
                 const semesterEl = semesterTemplate.querySelector('.semester-section');
                 semesterEl.dataset.semesterIndex = semesterIndex;
+
+                // Set calculation mode
+                const modeToggle = semesterEl.querySelector('.calculation-mode-toggle');
+                const isAverageMode = semesterData.calculationMode === 'average';
+                modeToggle.checked = isAverageMode;
+
                 if (!semesterData.name) {
                     // Auto-generate semester name logic
                     let nextYear = new Date().getFullYear();
@@ -715,6 +790,11 @@
                         coursesContainer.appendChild(courseEl);
                     });
                 }
+                
+                // Toggle course weight visibility based on mode
+                const courseWeightContainers = semesterEl.querySelectorAll('.course-weight-container');
+                courseWeightContainers.forEach(c => c.style.display = isAverageMode ? 'none' : 'block');
+
                 return semesterEl;
             }
 
@@ -751,14 +831,15 @@
             }
 
             // Data Manipulation (CRUD)
-            async function updateStudentData(updatedSemesters) {
-                if (!selectedStudentId || !currentUser) return;
-                const studentDocRef = doc(db, 'users', currentUser.uid, 'students', selectedStudentId);
-                try {
-                    await updateDoc(studentDocRef, { semesters: updatedSemesters });
-                } catch (error) {
-                    showError('数据更新失败', error.message);
-                }
+            async function updateStudentData(studentDataToUpdate) {
+                 if (!selectedStudentId || !currentUser) return;
+                 const studentDocRef = doc(db, 'users', currentUser.uid, 'students', selectedStudentId);
+                 try {
+                     // We pass the specific field to update, not the whole object
+                     await updateDoc(studentDocRef, studentDataToUpdate);
+                 } catch (error) {
+                     showError('数据更新失败', error.message);
+                 }
             }
 
             document.getElementById('new-student-name').addEventListener('keypress', (e) => {
@@ -769,7 +850,7 @@
                 const nameInput = document.getElementById('new-student-name');
                 const name = nameInput.value.trim();
                 if (!name || !currentUser) return;
-                const newStudent = { name: name, semesters: [{ name: '', courses: [] }] };
+                const newStudent = { name: name, semesters: [{ name: '', courses: [], calculationMode: 'weighted' }] };
                 try {
                     const docRef = await addDoc(collection(db, 'users', currentUser.uid, 'students'), newStudent);
                     selectedStudentId = docRef.id; // Switch to the new student
@@ -798,8 +879,8 @@
                 if (!selectedStudentId) { showError('请先选择一个学生。'); return; }
                 let studentData = JSON.parse(JSON.stringify(localStudentsData.find(s => s.id === selectedStudentId)));
                 if (!studentData) return;
-                studentData.semesters.push({ name: '', courses: [] });
-                updateStudentData(studentData.semesters);
+                studentData.semesters.push({ name: '', courses: [], calculationMode: 'weighted' });
+                updateStudentData({ semesters: studentData.semesters });
                 showSuccess('新学期已添加！');
             });
 
@@ -815,28 +896,28 @@
                     const semesterName = studentData.semesters[semesterIndex].name;
                     showConfirmModal(`删除学期: ${semesterName}`, `您确定要删除 "${semesterName}" 吗？`, () => {
                         studentData.semesters.splice(semesterIndex, 1);
-                        updateStudentData(studentData.semesters);
+                        updateStudentData({ semesters: studentData.semesters });
                         showSuccess('学期删除成功！');
                     });
                 } else if (target.classList.contains('add-course-btn')) {
                     const { semesterIndex } = semesterSection.dataset;
                     studentData.semesters[semesterIndex].courses.push({ name: '', weight: '20', assignments: [{ name: '', type: '', weight: '', score: '', maxScore: 100, deadline: '' }]});
-                    updateStudentData(studentData.semesters);
+                    updateStudentData({ semesters: studentData.semesters });
                     showSuccess('课程已添加！');
                 } else if (target.classList.contains('remove-course-btn')) {
                     const { semesterIndex, courseIndex } = courseCard.dataset;
                     studentData.semesters[semesterIndex].courses.splice(courseIndex, 1);
-                    updateStudentData(studentData.semesters);
+                    updateStudentData({ semesters: studentData.semesters });
                     showSuccess('课程删除成功！');
                 } else if (target.classList.contains('add-assignment-btn')) {
                     const { semesterIndex, courseIndex } = courseCard.dataset;
                     studentData.semesters[semesterIndex].courses[courseIndex].assignments.push({ name: '', type: '', weight: '', score: '', maxScore: 100, deadline: '' });
-                    updateStudentData(studentData.semesters);
+                    updateStudentData({ semesters: studentData.semesters });
                     showSuccess('评分项目已添加！');
                 } else if (target.classList.contains('remove-assignment-btn')) {
                     const { semesterIndex, courseIndex, assignmentIndex } = target.closest('.assignment-row').dataset;
                     studentData.semesters[semesterIndex].courses[courseIndex].assignments.splice(assignmentIndex, 1);
-                    updateStudentData(studentData.semesters);
+                    updateStudentData({ semesters: studentData.semesters });
                     showSuccess('评分项目删除成功！');
                 }
             });
@@ -852,7 +933,11 @@
                 const courseCard = target.closest('.course-card');
                 const assignmentRow = target.closest('.assignment-row');
                 const { semesterIndex } = semesterSection.dataset;
-                if (target.classList.contains('semester-name-input')) {
+
+                if (target.classList.contains('calculation-mode-toggle')) {
+                    const newMode = target.checked ? 'average' : 'weighted';
+                    studentData.semesters[semesterIndex].calculationMode = newMode;
+                } else if (target.classList.contains('semester-name-input')) {
                     studentData.semesters[semesterIndex].name = target.value;
                 } else if (courseCard) {
                     const { courseIndex } = courseCard.dataset;
@@ -871,7 +956,7 @@
                         if (target.classList.contains('course-weight-input')) courseData.weight = target.value;
                     }
                 }
-                updateStudentData(studentData.semesters);
+                updateStudentData({ semesters: studentData.semesters });
             });
 
             // Calculation Logic
@@ -928,33 +1013,61 @@
                 const studentData = localStudentsData.find(s => s.id === selectedStudentId);
                 if (!studentData) return;
                 const semesterData = studentData.semesters[semesterIndex];
+                const isAverageMode = semesterData.calculationMode === 'average';
                 
-                let totalWeightForGpa = 0, totalQualityPoints = 0, semesterTotalScore = 0;
+                let totalWeightForGpa = 0, totalQualityPoints = 0, semesterCalculatedScore = 0;
+                let simpleAverageScoreSum = 0, gradedCoursesCount = 0;
 
                 semesterData.courses.forEach(course => {
-                    const weight = parseFloat(course.weight) || 0;
-                    if (course.finalGrade !== undefined && course.finalGrade > 0 && weight > 0) {
-                        totalWeightForGpa += weight;
-                        totalQualityPoints += scoreToGpaPoint(course.finalGrade) * weight;
+                    if (course.finalGrade !== undefined && course.finalGrade > 0) {
+                        const weight = isAverageMode ? 1 : (parseFloat(course.weight) || 0);
+                        if (weight > 0) {
+                            totalWeightForGpa += weight;
+                            totalQualityPoints += scoreToGpaPoint(course.finalGrade) * weight;
+                        }
+                        simpleAverageScoreSum += course.finalGrade;
+                        gradedCoursesCount++;
                     }
-                    semesterTotalScore += parseFloat(course.contributionScore) || 0;
                 });
+
+                // Update UI based on mode
+                const scoreLabel = semesterEl.querySelector('.semester-score-label');
+                scoreLabel.textContent = isAverageMode ? '学期均分' : '学期总分';
+                const courseWeightContainers = semesterEl.querySelectorAll('.course-weight-container');
+                courseWeightContainers.forEach(c => c.style.display = isAverageMode ? 'none' : 'block');
                 
                 const gpaDisplay = semesterEl.querySelector('.semester-gpa-display');
                 const weightedScoreDisplay = semesterEl.querySelector('.semester-weighted-score-display');
+                const averageScoreDisplay = semesterEl.querySelector('.semester-average-score-display');
                 
+                // GPA Calculation
                 if (totalWeightForGpa > 0) {
                     gpaDisplay.textContent = (totalQualityPoints / totalWeightForGpa).toFixed(2);
                 } else {
                     gpaDisplay.textContent = 'N/A';
                 }
 
-                if (semesterTotalScore > 0) {
-                    weightedScoreDisplay.textContent = semesterTotalScore.toFixed(2);
-                    semesterData.semesterTotalScore = semesterTotalScore;
+                // Main Score Display (Mode-dependent)
+                if (isAverageMode) {
+                    semesterCalculatedScore = gradedCoursesCount > 0 ? simpleAverageScoreSum / gradedCoursesCount : 0;
+                } else {
+                    semesterData.courses.forEach(c => semesterCalculatedScore += parseFloat(c.contributionScore) || 0);
+                }
+
+                if (semesterCalculatedScore > 0) {
+                    weightedScoreDisplay.textContent = semesterCalculatedScore.toFixed(2);
+                    semesterData.semesterTotalScore = semesterCalculatedScore;
                 } else {
                     weightedScoreDisplay.textContent = 'N/A';
                     semesterData.semesterTotalScore = 0;
+                }
+
+                // Always-on Average Score Display
+                if (gradedCoursesCount > 0) {
+                    const simpleAverage = simpleAverageScoreSum / gradedCoursesCount;
+                    averageScoreDisplay.textContent = simpleAverage.toFixed(2);
+                } else {
+                    averageScoreDisplay.textContent = 'N/A';
                 }
             }
 
@@ -971,18 +1084,26 @@
                 let overallScoreSum = 0, validSemestersForScore = 0;
 
                 studentData.semesters.forEach(semester => {
+                    const isAverageMode = semester.calculationMode === 'average';
+                    let semesterIsValidForOverallScore = true;
                     let semesterTotalCourseWeight = 0;
+
                     semester.courses.forEach(course => {
-                        const weight = parseFloat(course.weight) || 0;
+                        const weight = isAverageMode ? 1 : (parseFloat(course.weight) || 0);
                         if (course.finalGrade !== undefined && course.finalGrade > 0 && weight > 0) {
                             overallTotalWeight += weight;
                             overallTotalQualityPoints += scoreToGpaPoint(course.finalGrade) * weight;
                         }
-                        semesterTotalCourseWeight += weight;
+                        if (!isAverageMode) {
+                            semesterTotalCourseWeight += (parseFloat(course.weight) || 0);
+                        }
                     });
                     
-                    // Only include semester score in average if its courses' weights sum to 100
-                    if (Math.abs(semesterTotalCourseWeight - 100) < 0.1 && semester.semesterTotalScore && semester.semesterTotalScore > 0) {
+                    if (!isAverageMode && Math.abs(semesterTotalCourseWeight - 100) > 0.1) {
+                        semesterIsValidForOverallScore = false;
+                    }
+                    
+                    if (semesterIsValidForOverallScore && semester.semesterTotalScore && semester.semesterTotalScore > 0) {
                          overallScoreSum += semester.semesterTotalScore;
                          validSemestersForScore++;
                     }
@@ -1088,7 +1209,7 @@
                             `确认导入数据`,
                             `您确定要用上传文件中的数据覆盖学生 "${studentName}" 的现有数据吗？此操作无法撤销。`,
                             () => {
-                                updateStudentData(newSemesters);
+                                updateStudentData({ semesters: newSemesters });
                                 showSuccess("数据导入成功！");
                             }
                         );
@@ -1115,7 +1236,7 @@
                     if (!semesterName || !courseName) return;
 
                     if (!semestersMap.has(semesterName)) {
-                        semestersMap.set(semesterName, { name: semesterName, courses: new Map() });
+                        semestersMap.set(semesterName, { name: semesterName, courses: new Map(), calculationMode: 'weighted' });
                     }
                     const semester = semestersMap.get(semesterName);
 
@@ -1240,7 +1361,7 @@
                 content += "========================================\n\n";
 
                 exportData.student.semesters.forEach(semester => {
-                    content += `学期: ${semester.name}\n`;
+                    content += `学期: ${semester.name} (计算模式: ${semester.calculationMode === 'average' ? '均分' : '加权'})\n`;
                     content += "----------------------------------------\n";
                     semester.courses.forEach(course => {
                         content += `  课程: ${course.name} (学期权重: ${course.weight}%)\n`;
@@ -1265,7 +1386,7 @@
                 content += "<hr>";
 
                 exportData.student.semesters.forEach(semester => {
-                    content += `<h2>学期: ${semester.name}</h2>`;
+                    content += `<h2>学期: ${semester.name} (计算模式: ${semester.calculationMode === 'average' ? '均分' : '加权'})</h2>`;
                     semester.courses.forEach(course => {
                         content += `<h3>课程: ${course.name} (学期权重: ${course.weight}%)</h3>`;
                         content += '<ul>';
@@ -1311,7 +1432,7 @@
                         } catch (err) {
                             showError('清空数据失败', err.message);
                         } finally {
-                            ui.loadingOverlay.style.display = 'none';  
+                            ui.loadingOverlay.style.display = 'none';
                         }
                     }
                 );
