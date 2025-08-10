@@ -86,62 +86,6 @@
         .fc-daygrid-event-dot {
             border-color: var(--fc-event-border-color, #fff) !important;
         }
-
-        /* Toggle Switch */
-        .toggle-switch {
-            position: relative;
-            display: inline-block;
-            width: 110px;
-            height: 34px;
-        }
-        .toggle-switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-        .toggle-slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #ccc;
-            transition: .4s;
-            border-radius: 34px;
-        }
-        .toggle-slider:before {
-            position: absolute;
-            content: "";
-            height: 26px;
-            width: 26px;
-            left: 4px;
-            bottom: 4px;
-            background-color: white;
-            transition: .4s;
-            border-radius: 50%;
-        }
-        input:checked + .toggle-slider {
-            background-color: #2563eb;
-        }
-        input:checked + .toggle-slider:before {
-            transform: translateX(76px);
-        }
-        .toggle-slider:after {
-            content: '加权模式';
-            color: white;
-            display: block;
-            position: absolute;
-            transform: translate(-50%,-50%);
-            top: 50%;
-            left: 45%;
-            font-size: 10px;
-            font-family: sans-serif;
-        }
-        input:checked + .toggle-slider:after {
-            content: '均分模式';
-             left: 55%;
-        }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -189,7 +133,7 @@
                     <h1 class="text-3xl md:text-4xl font-extrabold text-gray-800">分数计算与统计</h1>
                 </div>
                 
-                <!-- NEW: Unified User Menu -->
+                <!-- Unified User Menu -->
                 <div class="relative inline-block text-left">
                     <button type="button" id="user-menu-btn" class="inline-flex items-center gap-x-2 rounded-full p-1 pr-3 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
                         <img id="user-avatar" class="w-8 h-8 rounded-full bg-gray-200" src="" alt="User Avatar">
@@ -338,17 +282,16 @@
                 </div>
                 <div class="courses-container grid grid-cols-1 gap-8"></div>
                 <div class="mt-8 p-6 bg-gray-50 rounded-lg">
-                   <div class="flex justify-between items-start mb-4">
-                       <h3 class="text-xl font-bold text-gray-800">学期总结</h3>
-                       <div class="flex flex-col items-end">
-                            <span class="text-xs text-gray-500 mb-1">计算模式</span>
-                            <label class="toggle-switch">
-                               <input type="checkbox" class="calculation-mode-toggle">
-                               <span class="toggle-slider"></span>
-                            </label>
-                       </div>
-                   </div>
-                   <div class="space-y-4">
+                    <!-- REFINED SUMMARY SECTION -->
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+                        <h3 class="text-xl font-bold text-gray-800">学期总结</h3>
+                        <!-- NEW UI for Calculation Mode -->
+                        <div class="p-1 bg-gray-200 rounded-lg flex items-center w-full sm:w-auto text-sm">
+                            <button data-mode="weighted" class="mode-btn flex-1 sm:flex-none py-1.5 px-4 rounded-md font-semibold transition-all duration-200">加权模式</button>
+                            <button data-mode="average" class="mode-btn flex-1 sm:flex-none py-1.5 px-4 rounded-md font-semibold transition-all duration-200">均分模式</button>
+                        </div>
+                    </div>
+                    <div class="space-y-4">
                         <div class="flex justify-between items-center">
                             <div class="font-semibold text-gray-600 semester-score-label">学期总分</div>
                             <span class="semester-weighted-score-display text-3xl font-extrabold text-blue-600">N/A</span>
@@ -357,7 +300,7 @@
                             <div class="font-semibold text-gray-600">学期均分</div>
                             <span class="semester-average-score-display text-3xl font-extrabold text-indigo-600">N/A</span>
                         </div>
-                   </div>
+                    </div>
                 </div>
             </div>
         </template>
@@ -390,7 +333,7 @@
                                 <th class="p-3 text-sm font-semibold text-gray-500">权重(%)</th>
                                 <th class="p-3 text-sm font-semibold text-gray-500">得分</th>
                                 <th class="p-3 text-sm font-semibold text-gray-500">满分</th>
-                                <th class="p-3 text-sm font-semibold text-gray-500">截止日期</th>
+                                <th class="p-3 text-sm font-semibold text-gray-500">截止日期与时间</th>
                                 <th class="p-3 text-sm font-semibold text-gray-500 text-center"></th>
                             </tr>
                         </thead>
@@ -433,7 +376,7 @@
                     <input type="number" min="0" value="100" class="assignment-max-score-input w-24 bg-transparent outline-none p-1 text-center">
                 </td>
                 <td class="p-2">
-                    <input type="date" class="assignment-deadline-input w-full bg-transparent outline-none p-1">
+                    <input type="datetime-local" class="assignment-deadline-input w-full bg-transparent outline-none p-1">
                 </td>
                 <td class="p-2 text-center">
                     <button class="remove-assignment-btn text-gray-400 hover:text-red-500 transition">×</button>
@@ -763,9 +706,18 @@
                 const semesterEl = semesterTemplate.querySelector('.semester-section');
                 semesterEl.dataset.semesterIndex = semesterIndex;
 
-                const modeToggle = semesterEl.querySelector('.calculation-mode-toggle');
+                // NEW: Set active state for calculation mode buttons
                 const isAverageMode = semesterData.calculationMode === 'average';
-                modeToggle.checked = isAverageMode;
+                const weightedBtn = semesterEl.querySelector('button[data-mode="weighted"]');
+                const averageBtn = semesterEl.querySelector('button[data-mode="average"]');
+
+                if (isAverageMode) {
+                    averageBtn.classList.add('bg-white', 'text-blue-600', 'shadow-sm');
+                    weightedBtn.classList.add('text-gray-500', 'hover:bg-gray-300');
+                } else { // 'weighted' mode
+                    weightedBtn.classList.add('bg-white', 'text-blue-600', 'shadow-sm');
+                    averageBtn.classList.add('text-gray-500', 'hover:bg-gray-300');
+                }
 
                 if (!semesterData.name) {
                     let nextYear = new Date().getFullYear();
@@ -893,7 +845,16 @@
                 if (!studentData) return;
                 const semesterSection = target.closest('.semester-section');
                 const courseCard = target.closest('.course-card');
-                if (target.classList.contains('remove-semester-btn')) {
+                
+                if (target.classList.contains('mode-btn')) {
+                    const { semesterIndex } = semesterSection.dataset;
+                    const newMode = target.dataset.mode;
+                    if (studentData.semesters[semesterIndex].calculationMode !== newMode) {
+                        studentData.semesters[semesterIndex].calculationMode = newMode;
+                        updateStudentData({ semesters: studentData.semesters });
+                        // The onSnapshot listener will handle the re-render.
+                    }
+                } else if (target.classList.contains('remove-semester-btn')) {
                     const { semesterIndex } = semesterSection.dataset;
                     const semesterName = studentData.semesters[semesterIndex].name;
                     showConfirmModal(`删除学期: ${semesterName}`, `您确定要删除 "${semesterName}" 吗？`, () => {
@@ -934,10 +895,7 @@
                 const assignmentRow = target.closest('.assignment-row');
                 const { semesterIndex } = semesterSection.dataset;
 
-                if (target.classList.contains('calculation-mode-toggle')) {
-                    const newMode = target.checked ? 'average' : 'weighted';
-                    studentData.semesters[semesterIndex].calculationMode = newMode;
-                } else if (target.classList.contains('semester-name-input')) {
+                if (target.classList.contains('semester-name-input')) {
                     studentData.semesters[semesterIndex].name = target.value;
                 } else if (courseCard) {
                     const { courseIndex } = courseCard.dataset;
@@ -967,9 +925,6 @@
             ui.studentContentContainer.addEventListener('change', (e) => {
                 const studentData = updateLocalDataFromInput(e.target);
                 if (studentData) {
-                    if (e.target.classList.contains('calculation-mode-toggle')) {
-                        renderStudentContent();
-                    }
                     updateStudentData({ semesters: studentData.semesters });
                 }
             });
@@ -1037,7 +992,7 @@
                 });
 
                 const scoreLabel = semesterEl.querySelector('.semester-score-label');
-                scoreLabel.textContent = isAverageMode ? '学期均分' : '学期总分';
+                scoreLabel.textContent = isAverageMode ? '学期均分' : '学期加权分';
                 
                 const weightedScoreDisplay = semesterEl.querySelector('.semester-weighted-score-display');
                 const averageScoreDisplay = semesterEl.querySelector('.semester-average-score-display');
@@ -1112,8 +1067,8 @@
                                 if (assignment.deadline) {
                                     events.push({
                                         title: `${course.name}: ${assignment.name}`,
-                                        start: assignment.deadline,
-                                        allDay: true,
+                                        start: assignment.deadline, // FullCalendar can parse YYYY-MM-DDTHH:MM
+                                        allDay: false, // Set to false to show time
                                         backgroundColor: studentColor,
                                         borderColor: studentColor,
                                         extendedProps: {
@@ -1130,14 +1085,14 @@
             }
 
             // Import/Export/Template Logic
-            const TEMPLATE_HEADERS = [ "学期", "课程名称", "学期总分权重(%)", "评分项目", "类型", "权重(%)", "得分", "满分", "截止日期" ];
+            const TEMPLATE_HEADERS = [ "学期", "课程名称", "学期总分权重(%)", "评分项目", "类型", "权重(%)", "得分", "满分", "截止时间" ];
 
             ui.downloadTemplateBtn.addEventListener('click', (e) => {
                 e.preventDefault();
                 const sampleData = [
-                    { "学期": "2024-2025学年 第一学期", "课程名称": "计算机科学导论", "学期总分权重(%)": 30, "评分项目": "期中考试", "类型": "期中考试", "权重(%)": 40, "得分": 85, "满分": 100, "截止日期": "2025-10-25" },
-                    { "学期": "2024-2025学年 第一学期", "课程名称": "计算机科学导论", "学期总分权重(%)": 30, "评分项目": "期末项目", "类型": "项目", "权重(%)": 60, "得分": 92, "满分": 100, "截止日期": "2025-12-15" },
-                    { "学期": "2024-2025学年 第一学期", "课程名称": "高等数学", "学期总分权重(%)": 40, "评分项目": "平时作业1", "类型": "作业", "权重(%)": 10, "得分": 9, "满分": 10, "截止日期": "2025-09-30" },
+                    { "学期": "2024-2025学年 第一学期", "课程名称": "计算机科学导论", "学期总分权重(%)": 30, "评分项目": "期中考试", "类型": "期中考试", "权重(%)": 40, "得分": 85, "满分": 100, "截止时间": "2025-10-25 14:30" },
+                    { "学期": "2024-2025学年 第一学期", "课程名称": "计算机科学导论", "学期总分权重(%)": 30, "评分项目": "期末项目", "类型": "项目", "权重(%)": 60, "得分": 92, "满分": 100, "截止时间": "2025-12-15 23:59" },
+                    { "学期": "2024-2025学年 第一学期", "课程名称": "高等数学", "学期总分权重(%)": 40, "评分项目": "平时作业1", "类型": "作业", "权重(%)": 10, "得分": 9, "满分": 10, "截止时间": "2025-09-30 18:00" },
                 ];
                 const worksheet = XLSX.utils.json_to_sheet(sampleData, { header: TEMPLATE_HEADERS });
                 const workbook = XLSX.utils.book_new();
@@ -1176,7 +1131,7 @@
                             `您确定要用上传文件中的数据覆盖学生 "${studentName}" 的现有数据吗？此操作无法撤销。`,
                             () => {
                                 updateStudentData({ semesters: newSemesters });
-                                showSuccess("数据导入成功！");
+                                showSuccess("数据导入成功！日历已同步。");
                             }
                         );
 
@@ -1187,11 +1142,20 @@
                     }
                 };
                 reader.onerror = () => {
-                       showError("无法读取文件。");
-                       event.target.value = '';
+                        showError("无法读取文件。");
+                        event.target.value = '';
                 };
                 reader.readAsArrayBuffer(file);
             });
+
+            function excelDateToHtmlDateTime(date) {
+                if (!date) return '';
+                // Adjust for timezone offset to get local time
+                const tzoffset = date.getTimezoneOffset() * 60000; //offset in milliseconds
+                const localDate = new Date(date - tzoffset);
+                const localISOTime = localDate.toISOString().slice(0, 16);
+                return localISOTime;
+            }
 
             function processImportedData(data) {
                 const semestersMap = new Map();
@@ -1216,11 +1180,13 @@
                     const course = semester.courses.get(courseName);
 
                     if (row['评分项目']) {
-                        let deadline = row['截止日期'];
-                        if (typeof deadline === 'number') {
-                           deadline = new Date(Math.round((deadline - 25569) * 86400 * 1000)).toISOString().split('T')[0];
-                        } else if (deadline instanceof Date) {
-                           deadline = deadline.toISOString().split('T')[0];
+                        let deadline = row['截止时间'];
+                        let formattedDeadline = '';
+                        if (deadline instanceof Date) {
+                            formattedDeadline = excelDateToHtmlDateTime(deadline);
+                        } else if (typeof deadline === 'string') {
+                            // Handle strings like '2025-10-25 14:30' by replacing space with 'T'
+                            formattedDeadline = deadline.replace(' ', 'T');
                         }
 
                         course.assignments.push({
@@ -1229,7 +1195,7 @@
                             weight: row['权重(%)'] === undefined ? '' : String(row['权重(%)']),
                             score: row['得分'] === undefined ? '' : String(row['得分']),
                             maxScore: row['满分'] === undefined ? '100' : String(row['满分']),
-                            deadline: deadline || ''
+                            deadline: formattedDeadline || ''
                         });
                     }
                 });
@@ -1243,11 +1209,11 @@
             // --- Menu Logic ---
             function setupMenu(button, menu) {
                  button.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const isExpanded = button.getAttribute('aria-expanded') === 'true';
-                    button.setAttribute('aria-expanded', !isExpanded);
-                    menu.classList.toggle('hidden');
-                });
+                     e.stopPropagation();
+                     const isExpanded = button.getAttribute('aria-expanded') === 'true';
+                     button.setAttribute('aria-expanded', !isExpanded);
+                     menu.classList.toggle('hidden');
+                 });
             }
             
             setupMenu(ui.userMenu.btn, ui.userMenu.options);
@@ -1282,10 +1248,10 @@
                     semester.courses.forEach(course => {
                         if (course.assignments.length === 0) {
                              flatData.push({
-                                "学期": semester.name,
-                                "课程名称": course.name,
-                                "学期总分权重(%)": course.weight,
-                            });
+                                 "学期": semester.name,
+                                 "课程名称": course.name,
+                                 "学期总分权重(%)": course.weight,
+                             });
                         } else {
                             course.assignments.forEach(assignment => {
                                 flatData.push({
@@ -1297,7 +1263,7 @@
                                     "权重(%)": assignment.weight,
                                     "得分": assignment.score,
                                     "满分": assignment.maxScore,
-                                    "截止日期": assignment.deadline
+                                    "截止时间": (assignment.deadline || '').replace('T', ' ')
                                 });
                             });
                         }
@@ -1333,7 +1299,7 @@
                     semester.courses.forEach(course => {
                         content += `  课程: ${course.name} (学期权重: ${course.weight}%)\n`;
                         course.assignments.forEach(a => {
-                            content += `    - ${a.name} (${a.type || 'N/A'}): 得分 ${a.score || '-'} / ${a.maxScore || '100'}, 权重 ${a.weight}%, DDL: ${a.deadline || 'N/A'}\n`;
+                            content += `    - ${a.name} (${a.type || 'N/A'}): 得分 ${a.score || '-'} / ${a.maxScore || '100'}, 权重 ${a.weight}%, DDL: ${(a.deadline || 'N/A').replace('T', ' ')}\n`;
                         });
                         content += "\n";
                     });
