@@ -64,11 +64,9 @@
             <button id="import-btn" class="btn btn-primary">导入成绩</button>
         </div>
 
-        <!-- 学年模块输入区域：改为垂直堆叠 -->
-        <div class="grid grid-cols-1 gap-8"> <!-- 修改点1：移除了 lg:grid-cols-2，只保留 grid-cols-1 -->
-
-            <!-- 倒数第二学年 -->
-            <div class="card p-6 mb-8"> <!-- 修改点2：添加 mb-8 以增加与下一个卡片的间距 -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Penultimate Year Section -->
+            <div class="card p-6">
                 <h2 class="text-2xl font-bold text-gray-700 mb-4">倒数第二学年 (Penultimate Year)</h2>
                 <table class="w-full text-left">
                     <thead>
@@ -86,12 +84,12 @@
                 <button id="add-penultimate-module" class="btn btn-primary mt-4 w-full">添加模块</button>
             </div>
 
-            <!-- 最后一学年 -->
-            <div class="card p-6 mb-8"> <!-- 修改点3：同样添加 mb-8 -->
+            <!-- Final Year Section -->
+            <div class="card p-6">
                 <h2 class="text-2xl font-bold text-gray-700 mb-4">最后一学年 (Final Year)</h2>
                 <table class="w-full text-left">
                     <thead>
-                        <tr class="border-b-2">
+                         <tr class="border-b-2">
                             <th class="p-2 w-2/5">模块名称</th>
                             <th class="p-2">分数</th>
                             <th class="p-2">学分</th>
@@ -105,10 +103,9 @@
                 </table>
                 <button id="add-final-module" class="btn btn-primary mt-4 w-full">添加模块</button>
             </div>
-
         </div>
 
-        <!-- 结果和说明部分保持不变 -->
+        <!-- Results Section -->
         <div class="card p-8 mt-8">
             <h2 class="text-3xl font-bold text-gray-800 mb-6 text-center">计算结果</h2>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
@@ -128,36 +125,40 @@
                 </div>
             </div>
         </div>
-
+        
+        <!-- Explanation Section -->
         <div class="card p-6 mt-8 text-gray-700 text-sm">
-            <h3 class="text-lg font-bold mb-3">计算规则说明</h3>
-            <ul class="list-disc list-inside space-y-2">
-                <li>学位等级根据倒数第二学年 (Penultimate Year) 和最后一学年 (Final Year) 的加权平均分计算。</li>
-                <li>最终加权分 = (倒数第二学年平均分 × 1 + 最后一学年平均分 × 2) / 3。</li>
-                <li>学年平均分 = (所有模块的[分数 × 学分]之和) / (该学年总学分)。</li>
-                <li><strong>技能发现模块 (Skills Discovery Modules):</strong> 如果在最后一学年修读了此类模块，其分数和学分将被计入倒数第二学年用于计算。</li>
-                <li class="mt-4"><strong>学位等级划分:</strong>
-                    <ul class="list-inside list-disc ml-4 mt-1">
+             <h3 class="text-lg font-bold mb-3">计算规则说明</h3>
+             <ul class="list-disc list-inside space-y-2">
+                 <li>学位等级根据倒数第二学年 (Penultimate Year) 和最后一学年 (Final Year) 的加权平均分计算。</li>
+                 <li>最终加权分 = (倒数第二学年平均分 × 1 + 最后一学年平均分 × 2) / 3。</li>
+                 <li>学年平均分 = (所有模块的[分数 × 学分]之和) / (该学年总学分)。</li>
+                 <li><strong>技能发现模块 (Skills Discovery Modules):</strong> 如果在最后一学年修读了此类模块，其分数和学分将被计入倒数第二学年用于计算。</li>
+                 <li class="mt-4"><strong>学位等级划分:</strong>
+                     <ul class="list-inside list-disc ml-4 mt-1">
                         <li><span class="font-bold score-1st">70+</span>: First Class Honours (1st)</li>
                         <li><span class="font-bold score-2-1">60-69</span>: Upper Second Class Honours (2:1)</li>
                         <li><span class="font-bold score-2-2">50-59</span>: Lower Second Class Honours (2:2)</li>
                         <li><span class="font-bold score-3rd">40-49</span>: Third Class Honours (3rd)</li>
-                        <li><span class="font-bold score-fail"><40</span>: Fail</li>
-                    </ul>
-                </li>
-                <li>本计算器仅供参考，最终结果以学校官方发布为准。</li>
-            </ul>
+                        <li><span class="font-bold score-fail">&lt;40</span>: Fail</li>
+                     </ul>
+                 </li>
+                 <li>本计算器仅供参考，最终结果以学校官方发布为准。</li>
+             </ul>
         </div>
     </div>
 
     <script>
-        // ... 脚本部分完全保持不变 ...
         document.addEventListener('DOMContentLoaded', () => {
             const penultimateBody = document.getElementById('penultimate-year-modules');
             const finalBody = document.getElementById('final-year-modules');
             const importInput = document.getElementById('import-input');
+
+            // Add Module Buttons
             document.getElementById('add-penultimate-module').addEventListener('click', () => addModuleRow(penultimateBody, false));
             document.getElementById('add-final-module').addEventListener('click', () => addModuleRow(finalBody, true));
+
+            // Import/Export Buttons
             document.getElementById('import-btn').addEventListener('click', () => importInput.click());
             document.getElementById('download-template-btn').addEventListener('click', downloadTemplate);
             importInput.addEventListener('change', handleImport);
@@ -175,7 +176,7 @@
                         <td class="p-2 text-center"><input type="checkbox" class="discovery-checkbox h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" ${data.isDiscovery ? 'checked' : ''}></td>
                     `;
                 } else {
-                     innerHTML += '<td class="p-2"></td>';
+                     innerHTML += '<td class="p-2"></td>'; // Placeholder for alignment
                 }
                 innerHTML += `
                     <td class="p-2 text-right"><button class="remove-row-btn btn btn-danger p-2">×</button></td>
@@ -188,6 +189,7 @@
                 const row = createModuleRow(isFinalYear, data);
                 tbody.appendChild(row);
                 attachRowListeners(row);
+                // Add a few default rows on first click if no data is provided
                 if (!data && tbody.children.length === 1) {
                     for(let i=0; i<3; i++) {
                          const extraRow = createModuleRow(isFinalYear);
@@ -196,7 +198,7 @@
                     }
                 }
             }
-
+            
             function attachRowListeners(row) {
                 row.querySelector('.remove-row-btn').addEventListener('click', () => {
                     row.remove();
@@ -224,8 +226,10 @@
             function calculateAll() {
                 const penultimateRows = Array.from(penultimateBody.querySelectorAll('.module-row'));
                 const finalRows = Array.from(finalBody.querySelectorAll('.module-row'));
+
                 const discoveryModules = [];
                 const standardFinalModules = [];
+
                 finalRows.forEach(row => {
                     if (row.querySelector('.discovery-checkbox').checked) {
                         discoveryModules.push(row);
@@ -233,21 +237,28 @@
                         standardFinalModules.push(row);
                     }
                 });
+
                 const penultimateWithDiscoveryRows = penultimateRows.concat(discoveryModules);
+
                 const penultimateAvg = calculateYearAverage(penultimateWithDiscoveryRows);
                 const finalAvg = calculateYearAverage(standardFinalModules);
+
                 document.getElementById('penultimate-average').textContent = penultimateAvg.toFixed(2);
                 document.getElementById('final-average').textContent = finalAvg.toFixed(2);
+                
                 const classificationScore = (penultimateAvg * 1 + finalAvg * 2) / 3;
                 const scoreDisplay = document.getElementById('final-classification-score');
                 const gradeDisplay = document.getElementById('final-classification-grade');
+
                 if (isNaN(classificationScore) || classificationScore === 0) {
                     scoreDisplay.textContent = '0.00';
                     gradeDisplay.textContent = '-';
                     gradeDisplay.className = 'text-3xl font-bold';
                     return;
                 }
+
                 scoreDisplay.textContent = classificationScore.toFixed(2);
+
                 let grade = '';
                 let gradeClass = '';
                 if (classificationScore >= 70) {
@@ -287,6 +298,7 @@
             function handleImport(event) {
                 const file = event.target.files[0];
                 if (!file) return;
+
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     try {
@@ -295,11 +307,13 @@
                         const firstSheetName = workbook.SheetNames[0];
                         const worksheet = workbook.Sheets[firstSheetName];
                         const json = XLSX.utils.sheet_to_json(worksheet);
+                        
                         processImportedData(json);
+
                     } catch (err) {
                         alert("文件处理失败，请确保文件格式正确。错误: " + err.message);
                     } finally {
-                        event.target.value = '';
+                        event.target.value = ''; // Reset input
                     }
                 };
                 reader.onerror = () => {
@@ -310,8 +324,10 @@
             }
 
             function processImportedData(data) {
+                // Clear existing rows
                 penultimateBody.innerHTML = '';
                 finalBody.innerHTML = '';
+
                 data.forEach(row => {
                     const moduleData = {
                         name: row["Module Name"],
@@ -319,16 +335,19 @@
                         credits: row["Credits"],
                         isDiscovery: (row["Is Discovery Module"] || '').toLowerCase() === 'yes'
                     };
+
                     const year = (row["Year"] || '').toLowerCase();
                     if (year.includes('penultimate')) {
                         addModuleRow(penultimateBody, false, moduleData);
-                    } else if (year.includes('final')) {  
+                    } else if (year.includes('final')) {
                         addModuleRow(finalBody, true, moduleData);
                     }
                 });
+
                 calculateAll();
             }
-
+            
+            // Initial setup
             addModuleRow(penultimateBody, false);
             addModuleRow(finalBody, true);
         });
