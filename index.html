@@ -565,6 +565,21 @@
 
             // Login/Logout & Menu Actions
             document.getElementById('login-btn').addEventListener('click', () => signInWithPopup(auth, provider).catch(err => showError('登录失败', err.message)));
+            
+            // --- FIX START: Added User Menu Toggle Logic ---
+            ui.userMenu.btn.addEventListener('click', (event) => {
+                event.stopPropagation(); // Prevent the window click listener from firing immediately
+                ui.userMenu.options.classList.toggle('hidden');
+            });
+
+            // Close dropdown when clicking outside
+            window.addEventListener('click', (e) => {
+                if (!ui.userMenu.btn.contains(e.target) && !ui.userMenu.options.contains(e.target)) {
+                    ui.userMenu.options.classList.add('hidden');
+                }
+            });
+            // --- FIX END ---
+            
             ui.userMenu.logoutBtn.addEventListener('click', (e) => {
                 e.preventDefault();
                 signOut(auth).catch(err => showError('登出失败', err.message))
@@ -805,9 +820,9 @@
                  if (!selectedStudentId || !currentUser) return;
                  const studentDocRef = doc(db, 'users', currentUser.uid, 'students', selectedStudentId);
                  try {
-                     await updateDoc(studentDocRef, studentDataToUpdate);
+                      await updateDoc(studentDocRef, studentDataToUpdate);
                  } catch (error) {
-                     showError('数据更新失败', error.message);
+                      showError('数据更新失败', error.message);
                  }
             }
 
