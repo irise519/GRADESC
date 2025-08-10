@@ -46,6 +46,8 @@
         .btn-primary:hover { background-color: #1d4ed8; }
         .btn-secondary { background-color: #e5e7eb; color: #374151; }
         .btn-secondary:hover { background-color: #d1d5db; }
+        .btn-success { background-color: #10b981; color: white; }
+        .btn-success:hover { background-color: #059669; }
         .btn-danger { background-color: #ef4444; color: white; }
         .btn-danger:hover { background-color: #dc2626; }
         .btn-danger-outline { background-color: transparent; color: #ef4444; border-color: #ef4444; }
@@ -95,9 +97,13 @@
     <div id="app-view" class="max-w-7xl mx-auto" v-cloak>
         <header class="flex flex-col md:flex-row justify-between items-center mb-6">
             <h1 class="text-3xl md:text-4xl font-extrabold text-gray-800 mb-4 md:mb-0">分数计算与统计</h1>
-            <div id="user-profile" class="flex items-center space-x-4">
+            <div id="user-profile" class="flex items-center space-x-2 md:space-x-4">
                 <img id="user-avatar" class="w-10 h-10 rounded-full" src="" alt="User Avatar">
                 <span id="user-name" class="font-semibold text-gray-700"></span>
+                <!-- ADDED: Import and Template Download Buttons -->
+                <input type="file" id="import-file-input" class="hidden" accept=".xlsx, .xls">
+                <button id="import-btn" class="btn btn-success">导入</button>
+                <button id="download-template-btn" class="btn btn-secondary">下载模板</button>
                 <div class="relative inline-block text-left">
                     <div>
                         <button type="button" id="export-menu-btn" class="inline-flex w-full justify-center gap-x-1.5 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50" aria-expanded="false" aria-haspopup="true">
@@ -214,7 +220,6 @@
                         </button>
                     </div>
                 </div>
-                <!-- MODIFIED: Changed grid-cols-2 to grid-cols-1 for a single column layout -->
                 <div class="courses-container grid grid-cols-1 gap-8"></div>
                 <div class="mt-8 p-6 bg-gray-50 rounded-lg">
                    <h3 class="text-xl font-bold text-gray-800 mb-4">学期总结</h3>
@@ -230,7 +235,6 @@
                             <span class="semester-gpa-display text-3xl font-extrabold text-green-600">N/A</span>
                         </div>
                         <div class="flex justify-between items-center">
-                            <!-- MODIFIED: Changed label to reflect new calculation -->
                             <div class="font-semibold text-gray-600">学期总分</div>
                             <span class="semester-weighted-score-display text-3xl font-extrabold text-blue-600">N/A</span>
                         </div>
@@ -248,16 +252,11 @@
                         </svg>
                     </button>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <!-- REMOVED: Target grade input -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                     <div>
-                        <!-- MODIFIED: Changed label from "学分" to "学期总分权重(%)" -->
                         <label class="text-sm font-medium text-gray-500">学期总分权重(%)</label>
-                        <!-- MODIFIED: Changed class to course-weight-input -->
                         <input type="number" min="0" step="0.5" placeholder="20" class="course-weight-input form-input w-full p-2 mt-1 rounded-md">
-                    </div>
-                    <div>
-                        <label class="text-sm font-medium text-gray-500">目标分</label>
-                        <input type="number" min="0" max="100" placeholder="90" class="target-grade-input form-input w-full p-2 mt-1 rounded-md">
                     </div>
                     <div>
                         <label class="text-sm font-medium text-gray-500">权重和</label>
@@ -285,15 +284,11 @@
                         <h3 class="text-md font-semibold text-gray-600">当前课程总分:</h3>
                         <p class="current-grade-display text-2xl font-bold text-blue-600">N/A</p>
                     </div>
-                    <!-- ADDED: New display for contribution score -->
                     <div class="flex justify-between items-center">
                         <h3 class="text-md font-semibold text-gray-600">对学期总分贡献:</h3>
                         <p class="contribution-score-display text-2xl font-bold text-purple-600">N/A</p>
                     </div>
-                    <div class="flex justify-between items-center">
-                        <h3 class="text-md font-semibold text-gray-600">目标达成分析:</h3>
-                        <p class="target-analysis-display text-sm font-semibold text-gray-500 text-right">输入目标分以分析</p>
-                    </div>
+                    <!-- REMOVED: Target analysis display -->
                 </div>
             </div>
         </template>
@@ -408,6 +403,9 @@
                 userAvatar: document.getElementById('user-avatar'),
                 studentSelector: document.getElementById('student-selector'),
                 studentContentContainer: document.getElementById('student-content-container'),
+                importBtn: document.getElementById('import-btn'),
+                importFileInput: document.getElementById('import-file-input'),
+                downloadTemplateBtn: document.getElementById('download-template-btn'),
                 confirmModal: {
                     el: document.getElementById('confirm-modal'),
                     title: document.getElementById('confirm-modal-title'),
@@ -633,9 +631,7 @@
                 courseEl.dataset.semesterIndex = semesterIndex;
                 courseEl.dataset.courseIndex = courseIndex;
                 courseEl.querySelector('.course-name-input').value = courseData.name;
-                // MODIFIED: Use course-weight-input and courseData.weight
                 courseEl.querySelector('.course-weight-input').value = courseData.weight;
-                courseEl.querySelector('.target-grade-input').value = courseData.targetGrade;
                 const assignmentsContainer = courseEl.querySelector('.assignments-container');
                 if(Array.isArray(courseData.assignments)) {
                     courseData.assignments.forEach((assignmentData, assignmentIndex) => {
@@ -744,8 +740,7 @@
                     );
                 } else if (target.classList.contains('add-course-btn')) {
                     const { semesterIndex } = semesterSection.dataset;
-                    // MODIFIED: Use 'weight' instead of 'credits'
-                    studentData.semesters[semesterIndex].courses.push({ name: '', weight: '20', targetGrade: '90', assignments: [{ name: '', type: '', weight: '', score: '', maxScore: 100 }]});
+                    studentData.semesters[semesterIndex].courses.push({ name: '', weight: '20', assignments: [{ name: '', type: '', weight: '', score: '', maxScore: 100 }]});
                     updateStudentData(studentData.semesters);
                     showSuccess('课程已添加！');
                 } else if (target.classList.contains('remove-course-btn')) {
@@ -791,9 +786,7 @@
                         if (target.classList.contains('assignment-max-score-input')) assignmentData.maxScore = target.value;
                     } else {
                         if (target.classList.contains('course-name-input')) courseData.name = target.value;
-                        // MODIFIED: Use course-weight-input and save to courseData.weight
                         if (target.classList.contains('course-weight-input')) courseData.weight = target.value;
-                        if (target.classList.contains('target-grade-input')) courseData.targetGrade = target.value;
                     }
                 }
                 updateStudentData(studentData.semesters);
@@ -841,37 +834,11 @@
                 }
                 courseData.finalGrade = finalGrade;
 
-                // ADDED: Calculate and display contribution score
                 const courseWeight = parseFloat(courseData.weight) || 0;
                 const contributionScore = finalGrade > 0 ? (finalGrade * (courseWeight / 100)) : 0;
                 courseData.contributionScore = contributionScore;
                 const contributionDisplay = courseEl.querySelector('.contribution-score-display');
                 contributionDisplay.textContent = contributionScore > 0 ? `${contributionScore.toFixed(2)} 分` : 'N/A';
-                
-                const targetAnalysisDisplay = courseEl.querySelector('.target-analysis-display');
-                const targetGrade = parseFloat(courseData.targetGrade);
-                if (!isNaN(targetGrade)) {
-                    const remainingWeight = totalWeight - gradedWeight;
-                    if (remainingWeight > 0.01) {
-                        if (totalWeight > 100.01) {
-                            targetAnalysisDisplay.textContent = '权重总和超过100%';
-                        } else {
-                            const pointsNeeded = (targetGrade * totalWeight / 100) - currentWeightedScore;
-                            if (pointsNeeded <= 0) {
-                                targetAnalysisDisplay.innerHTML = `已达到目标!`;
-                            } else {
-                                const requiredAvg = (pointsNeeded / remainingWeight) * 100;
-                                targetAnalysisDisplay.innerHTML = `剩余项目需 <span class="font-bold ${requiredAvg > 100.01 ? 'text-red-500' : 'text-blue-600'}">${requiredAvg.toFixed(2)}%</span>`;
-                            }
-                        }
-                    } else if (totalWeight > 0) {
-                        targetAnalysisDisplay.textContent = finalGrade >= targetGrade ? '恭喜！已达到目标！' : '很遗憾，未达到目标。';
-                    } else {
-                        targetAnalysisDisplay.textContent = '请输入权重以分析';
-                    }
-                } else {
-                    targetAnalysisDisplay.textContent = '输入目标分以分析';
-                }
             }
 
             function updateSemesterCalculations(semesterEl) {
@@ -888,7 +855,6 @@
                         totalWeightForGpa += weight;
                         totalQualityPoints += scoreToGpaPoint(course.finalGrade) * weight;
                     }
-                    // MODIFIED: Sum up contribution scores for the semester total
                     semesterTotalScore += parseFloat(course.contributionScore) || 0;
                 });
                 
@@ -923,18 +889,19 @@
                 let overallScoreSum = 0, validSemestersForScore = 0;
 
                 studentData.semesters.forEach(semester => {
+                    let semesterTotalCourseWeight = 0;
                     semester.courses.forEach(course => {
                         const weight = parseFloat(course.weight) || 0;
                         if (course.finalGrade !== undefined && course.finalGrade > 0 && weight > 0) {
                             overallTotalWeight += weight;
                             overallTotalQualityPoints += scoreToGpaPoint(course.finalGrade) * weight;
                         }
+                        semesterTotalCourseWeight += weight;
                     });
-
-                    // MODIFIED: Calculate average of semester scores
-                    if(semester.semesterTotalScore && semester.semesterTotalScore > 0) {
-                        overallScoreSum += semester.semesterTotalScore;
-                        validSemestersForScore++;
+                    
+                    if (Math.abs(semesterTotalCourseWeight - 100) < 0.1 && semester.semesterTotalScore && semester.semesterTotalScore > 0) {
+                         overallScoreSum += semester.semesterTotalScore;
+                         validSemestersForScore++;
                     }
                 });
                 
@@ -965,7 +932,113 @@
                 return 0.0;
             }
 
-            // === EXPORT LOGIC ===
+            // === Import/Export/Template Logic ===
+            const TEMPLATE_HEADERS = [ "学期", "课程名称", "学期总分权重(%)", "评分项目", "类型", "权重(%)", "得分", "满分" ];
+
+            ui.downloadTemplateBtn.addEventListener('click', () => {
+                const sampleData = [
+                    { "学期": "2024-2025学年 第一学期", "课程名称": "计算机科学导论", "学期总分权重(%)": 30, "评分项目": "期中考试", "类型": "期中考试", "权重(%)": 40, "得分": 85, "满分": 100 },
+                    { "学期": "2024-2025学年 第一学期", "课程名称": "计算机科学导论", "学期总分权重(%)": 30, "评分项目": "期末项目", "类型": "项目", "权重(%)": 60, "得分": 92, "满分": 100 },
+                    { "学期": "2024-2025学年 第一学期", "课程名称": "高等数学", "学期总分权重(%)": 40, "评分项目": "平时作业1", "类型": "作业", "权重(%)": 10, "得分": 9, "满分": 10 },
+                    { "学期": "2024-2025学年 第一学期", "课程名称": "高等数学", "学期总分权重(%)": 40, "评分项目": "期末考试", "类型": "期末考试", "权重(%)": 90, "得分": 88, "满分": 100 },
+                    { "学期": "2024-2025学年 第一学期", "课程名称": "大学英语", "学期总分权重(%)": 30, "评分项目": "课堂表现", "类型": "出勤", "权重(%)": 100, "得分": 95, "满分": 100 },
+                ];
+                const worksheet = XLSX.utils.json_to_sheet(sampleData, { header: TEMPLATE_HEADERS });
+                const workbook = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(workbook, worksheet, "成绩导入模板");
+                XLSX.writeFile(workbook, `grades_import_template.xlsx`);
+                showSuccess('模板下载成功！');
+            });
+
+            ui.importBtn.addEventListener('click', () => {
+                if (!selectedStudentId) {
+                    showError("请先选择一个学生以导入数据。");
+                    return;
+                }
+                ui.importFileInput.click();
+            });
+
+            ui.importFileInput.addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, {type: 'array'});
+                        const firstSheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[firstSheetName];
+                        const json = XLSX.utils.sheet_to_json(worksheet);
+
+                        const newSemesters = processImportedData(json);
+                        
+                        const studentName = localStudentsData.find(s => s.id === selectedStudentId)?.name;
+                        showConfirmModal(
+                            `确认导入数据`,
+                            `您确定要用上传文件中的数据覆盖学生 "${studentName}" 的现有数据吗？此操作无法撤销。`,
+                            () => {
+                                updateStudentData(newSemesters);
+                                showSuccess("数据导入成功！");
+                            }
+                        );
+
+                    } catch (err) {
+                        showError("文件处理失败", "请确保上传的是格式正确的 Excel 文件。错误: " + err.message);
+                    } finally {
+                        // Reset file input to allow re-uploading the same file
+                        event.target.value = '';
+                    }
+                };
+                reader.onerror = () => {
+                     showError("无法读取文件。");
+                     event.target.value = '';
+                };
+                reader.readAsArrayBuffer(file);
+            });
+
+            function processImportedData(data) {
+                const semestersMap = new Map();
+
+                data.forEach(row => {
+                    const semesterName = row['学期'];
+                    const courseName = row['课程名称'];
+                    if (!semesterName || !courseName) return; // Skip rows without essential info
+
+                    if (!semestersMap.has(semesterName)) {
+                        semestersMap.set(semesterName, { name: semesterName, courses: new Map() });
+                    }
+                    const semester = semestersMap.get(semesterName);
+
+                    if (!semester.courses.has(courseName)) {
+                        semester.courses.set(courseName, {
+                            name: courseName,
+                            weight: row['学期总分权重(%)'] || '0',
+                            assignments: []
+                        });
+                    }
+                    const course = semester.courses.get(courseName);
+
+                    if (row['评分项目']) {
+                        course.assignments.push({
+                            name: row['评分项目'] || '',
+                            type: row['类型'] || '',
+                            weight: row['权重(%)'] === undefined ? '' : String(row['权重(%)']),
+                            score: row['得分'] === undefined ? '' : String(row['得分']),
+                            maxScore: row['满分'] === undefined ? '100' : String(row['满分']),
+                        });
+                    }
+                });
+
+                // Convert maps to arrays
+                return Array.from(semestersMap.values()).map(s => {
+                    s.courses = Array.from(s.courses.values());
+                    return s;
+                });
+            }
+
+
+            // --- Export Logic ---
             ui.exportMenu.btn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const isHidden = ui.exportMenu.options.classList.contains('hidden');
@@ -992,16 +1065,15 @@
             }
             const getFilename = () => `grade_report_${new Date().toISOString().slice(0, 10)}`;
             
-            // MODIFIED: Updated export headers
             const EXPORT_HEADERS = [
                 "学生姓名", "学期", "课程名称", "学期总分权重(%)",
-                "目标分", "课程总分", "对学期总分贡献", "评分项目", "类型",
-                "权重 (%)", "得分", "满分"
+                "课程总分", "对学期总分贡献", "评分项目", "类型",
+                "权重(%)", "得分", "满分"
             ];
             const HEADER_KEYS = {
                 studentName: "学生姓名", semesterName: "学期", courseName: "课程名称", courseWeight: "学期总分权重(%)",
-                courseTargetGrade: "目标分", courseFinalGrade: "课程总分", courseContribution: "对学期总分贡献", assignmentName: "评分项目", assignmentType: "类型",
-                assignmentWeight: "权重 (%)", assignmentScore: "得分", assignmentMaxScore: "满分"
+                courseFinalGrade: "课程总分", courseContribution: "对学期总分贡献", assignmentName: "评分项目", assignmentType: "类型",
+                assignmentWeight: "权重(%)", assignmentScore: "得分", assignmentMaxScore: "满分"
             };
 
             function updateAllDataForExport() {
@@ -1054,7 +1126,6 @@
                                         ...semesterRow,
                                         [HEADER_KEYS.courseName]: course.name,
                                         [HEADER_KEYS.courseWeight]: course.weight,
-                                        [HEADER_KEYS.courseTargetGrade]: course.targetGrade,
                                         [HEADER_KEYS.courseFinalGrade]: finalGrade,
                                         [HEADER_KEYS.courseContribution]: contribution,
                                     };
@@ -1102,7 +1173,7 @@
                     if (row[HEADER_KEYS.courseName] && row[HEADER_KEYS.courseName] !== currentCourse) {
                         currentCourse = row[HEADER_KEYS.courseName];
                         textContent += `  课程: ${currentCourse}\n`;
-                        textContent += `  - 权重: ${row[HEADER_KEYS.courseWeight] || 'N/A'}%, 目标分: ${row[HEADER_KEYS.courseTargetGrade] || 'N/A'}, 最终总分: ${row[HEADER_KEYS.courseFinalGrade]}, 贡献分: ${row[HEADER_KEYS.courseContribution]}\n`;
+                        textContent += `  - 权重: ${row[HEADER_KEYS.courseWeight] || 'N/A'}%, 最终总分: ${row[HEADER_KEYS.courseFinalGrade]}, 贡献分: ${row[HEADER_KEYS.courseContribution]}\n`;
                     }
                     if (row[HEADER_KEYS.assignmentName]) {
                         textContent += `    - (${row[HEADER_KEYS.assignmentType] || '未知'}) ${row[HEADER_KEYS.assignmentName]}: 得分 ${row[HEADER_KEYS.assignmentScore]}/${row[HEADER_KEYS.assignmentMaxScore]} (权重: ${row[HEADER_KEYS.assignmentWeight]}%)\n`;
@@ -1149,7 +1220,7 @@
                     });
                     return newRow;
                 });
-                const worksheet = XLSX.utils.json_to_sheet(xlsxData);
+                const worksheet = XLSX.utils.json_to_sheet(xlsxData, {header: EXPORT_HEADERS});
                 const workbook = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(workbook, worksheet, "成绩单");
                 XLSX.writeFile(workbook, `${getFilename()}.xlsx`);
