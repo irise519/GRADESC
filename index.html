@@ -9,9 +9,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <!-- FullCalendar JS -->
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
-    <!-- Shepherd.js for tours -->
-    <script src="https://cdn.jsdelivr.net/npm/shepherd.js@10.0.1/dist/js/shepherd.min.js"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/shepherd.js@10.0.1/dist/css/shepherd.css"/>
 
     <style>
         body {
@@ -85,45 +82,6 @@
         .fc-daygrid-event-dot {
             border-color: var(--fc-event-border-color, #fff) !important;
         }
-        
-        /* Shepherd.js Tour Styles */
-        .shepherd-element {
-            box-shadow: 0 5px 15px rgba(0,0,0,.2);
-            border-radius: 0.75rem;
-            z-index: 100;
-        }
-        .shepherd-header {
-            background-color: #2563eb;
-            color: white;
-            padding: 1rem;
-            border-top-left-radius: 0.75rem;
-            border-top-right-radius: 0.75rem;
-        }
-        .shepherd-text {
-            padding: 1rem;
-            font-size: 0.95rem;
-            line-height: 1.5;
-            color: #374151;
-        }
-        .shepherd-button {
-            background: #2563eb;
-            color: white;
-            padding: 0.5rem 1rem;
-            border-radius: 0.5rem;
-            border: none;
-            font-weight: 600;
-        }
-        .shepherd-button:not(:disabled):hover {
-            background: #1d4ed8;
-        }
-        .shepherd-button.shepherd-button-secondary {
-            background: #e5e7eb;
-            color: #374151;
-        }
-        .shepherd-button.shepherd-button-secondary:not(:disabled):hover {
-            background: #d1d5db;
-        }
-
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -173,7 +131,8 @@
                 <div id="user-profile" class="flex items-center space-x-2 md:space-x-4 mt-4 md:mt-0">
                     <img id="user-avatar" class="w-10 h-10 rounded-full" src="" alt="User Avatar">
                     <span id="user-name" class="font-semibold text-gray-700"></span>
-                    <button id="help-btn" class="btn btn-secondary">帮助</button>
+                    <!-- MODIFIED: Changed help button to a link -->
+                    <a href="./help.html" target="_blank" id="help-btn" class="btn btn-secondary">帮助</a>
                     <input type="file" id="import-file-input" class="hidden" accept=".xlsx, .xls">
                     <button id="import-btn" class="btn btn-success">导入</button>
                     <button id="download-template-btn" class="btn btn-secondary">下载模板</button>
@@ -567,11 +526,6 @@
                     initializeCalendar();
                     setupStudentListener();
                     
-                    if (!localStorage.getItem('hasSeenTour')) {
-                        setTimeout(startTour, 1500); 
-                        localStorage.setItem('hasSeenTour', 'true');
-                    }
-
                 } else {
                     currentUser = null;
                     if (studentsUnsubscribe) studentsUnsubscribe();
@@ -1174,97 +1128,13 @@
                     }
                 });
 
-                return Array.from(semestersMap.values()).map(s => {
+                return Array.from(semestersMap.values()).map(s => {  
                     s.courses = Array.from(s.courses.values());
                     return s;
                 });
             }
 
             // ... Export Logic ...
-
-            // New User Tour Logic
-            ui.helpBtn.addEventListener('click', startTour);
-
-            function startTour() {
-                const tour = new Shepherd.Tour({
-                    useModalOverlay: true,
-                    defaultStepOptions: {
-                        classes: 'shadow-md bg-white',
-                        scrollTo: true,
-                        buttons: [
-                            { text: '上一步', action: function() { return this.back(); }, classes: 'shepherd-button-secondary' },
-                            { text: '下一步', action: function() { return this.next(); } }
-                        ]
-                    }
-                });
-
-                tour.addStep({
-                    title: '欢迎使用 GRADESC!',
-                    text: '这是一个简短的向导，将帮助您快速了解主要功能。',
-                    buttons: [{ text: '开始', action: tour.next }]
-                });
-
-                tour.addStep({
-                    title: '学生列表',
-                    text: '这里是您的学生列表。您可以点击姓名来切换查看不同学生的数据。',
-                    attachTo: { element: '#sidebar', on: 'right' }
-                });
-                
-                tour.addStep({
-                    title: '添加新学生',
-                    text: '首先，在这里输入新学生的姓名，然后点击加号按钮来创建一位新学生。',
-                    attachTo: { element: '#add-student-card', on: 'bottom' }
-                });
-
-                tour.addStep({
-                    title: '数据管理',
-                    text: '您可以在这里导入/导出学生数据，或下载用于导入的Excel模板。',
-                    attachTo: { element: '#user-profile', on: 'bottom' }
-                });
-
-                tour.addStep({
-                    title: '截止日期日历',
-                    text: '所有学生的作业截止日期都会在这里以日历形式显示，方便您一目了然。',
-                    attachTo: { element: '#calendar-card', on: 'bottom' }
-                });
-
-                // Interactive step: Add Semester
-                tour.addStep({
-                    title: '添加新学期',
-                    text: '现在，请为当前选中的学生点击“添加新学期”按钮来创建一个学期。',
-                    attachTo: { element: '#add-semester-btn', on: 'top' },
-                    buttons: [], // No buttons, user must click the element
-                    advanceOn: { selector: '#add-semester-btn', event: 'click' }
-                });
-
-                // This step appears AFTER the user adds a semester
-                tour.addStep({
-                    title: '管理学期',
-                    text: '太棒了！您已经创建了一个新学期。您可以在这里修改学期名称或添加课程。',
-                    attachTo: { 
-                        element: '.semester-section .add-course-btn', 
-                        on: 'bottom'
-                    },
-                    when: {
-                        show: () => {
-                            // Ensure the element exists before showing the step
-                            const el = document.querySelector('.semester-section .add-course-btn');
-                            if (!el) {
-                                tour.cancel(); // Cancel if element not found
-                            }
-                        }
-                    }
-                });
-                
-                tour.on('complete', () => {
-                    showSuccess("向导结束！祝您使用愉快。");
-                });
-                 tour.on('cancel', () => {
-                    showSuccess("向导已跳过。");
-                });
-
-                tour.start();
-            }
 
         } catch (error) {
             console.error("初始化失败:", error);
