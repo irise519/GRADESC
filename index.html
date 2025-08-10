@@ -417,10 +417,6 @@
                         <h3 class="text-md font-semibold text-gray-600">当前课程总分:</h3>
                         <p class="current-grade-display text-2xl font-bold text-blue-600">N/A</p>
                     </div>
-                     <div class="flex justify-between items-center">
-                        <h3 class="text-md font-semibold text-gray-600">对学期总分贡献:</h3>
-                        <p class="contribution-score-display text-2xl font-bold text-purple-600">N/A</p>
-                    </div>
                 </div>
             </div>
         </template>
@@ -1037,10 +1033,7 @@
                 courseData.finalGrade = finalGrade;
 
                 const courseWeight = parseFloat(courseData.weight) || 0;
-                const contributionScore = finalGrade > 0 ? (finalGrade * (courseWeight / 100)) : 0;
-                courseData.contributionScore = contributionScore;
-                const contributionDisplay = courseEl.querySelector('.contribution-score-display');
-                contributionDisplay.textContent = contributionScore > 0 ? `${contributionScore.toFixed(2)} 分` : 'N/A';
+                courseData.contributionScore = finalGrade > 0 ? (finalGrade * (courseWeight / 100)) : 0;
             }
 
             function updateSemesterCalculations(semesterEl) {
