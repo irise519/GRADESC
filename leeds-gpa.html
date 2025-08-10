@@ -99,7 +99,7 @@
                     </thead>
                     <tbody id="final-year-modules">
                         <!-- Module rows will be inserted here -->
-                    </tbody>
+                    </tbody>  
                 </table>
                 <button id="add-final-module" class="btn btn-primary mt-4 w-full">添加模块</button>
             </div>
@@ -215,7 +215,7 @@
                 moduleRows.forEach(row => {
                     const mark = parseFloat(row.querySelector('.mark-input').value) || 0;
                     const credit = parseFloat(row.querySelector('.credit-input').value) || 0;
-                    if (mark > 0 && credit > 0) {
+                    if (mark > 0 && credit > 0) {  
                         totalWeightedScore += mark * credit;
                         totalCredits += credit;
                     }
