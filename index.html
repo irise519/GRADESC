@@ -165,7 +165,8 @@
                         <!-- GPA Tools Section -->
                         <div class="border-t border-gray-200 my-1"></div>
                         <div class="px-4 py-2 text-xs text-gray-500">大学GPA工具</div>
-                        <a href="./leeds-gpa.html" target="_blank" class="flex items-center gap-x-3 text-gray-700 px-4 py-2 text-sm hover:bg-gray-100" role="menuitem">
+                        <!-- MODIFIED: Added ID to this link -->
+                        <a href="./leeds-gpa.html" id="leeds-gpa-link" class="flex items-center gap-x-3 text-gray-700 px-4 py-2 text-sm hover:bg-gray-100" role="menuitem">
                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor"><path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L9 9.61V16a1 1 0 001 1h2a1 1 0 001-1v-6.39l6.394-2.69a1 1 0 000-1.84l-7-3zM10 8L3 5.39 10 3l7 2.39L10 8z" /></svg>
                            <span>利兹大学 (UoL)</span>
                         </a>
@@ -485,6 +486,8 @@
                     exportXlsx: document.getElementById('export-xlsx'),
                     clearAllData: document.getElementById('clear-all-data'),
                     logoutBtn: document.getElementById('logout-btn'),
+                    // MODIFIED: Added a reference to the link
+                    leedsGpaLink: document.getElementById('leeds-gpa-link'),
                 }
             };
 
@@ -562,12 +565,20 @@
                 }
             });
 
-            // Login/Logout
+            // Login/Logout & Menu Actions
             document.getElementById('login-btn').addEventListener('click', () => signInWithPopup(auth, provider).catch(err => showError('登录失败', err.message)));
             ui.userMenu.logoutBtn.addEventListener('click', (e) => {
                 e.preventDefault();
                 signOut(auth).catch(err => showError('登出失败', err.message))
             });
+            
+            // MODIFIED: Added a specific event listener for the GPA link
+            ui.userMenu.leedsGpaLink.addEventListener('click', (e) => {
+                e.preventDefault(); // Prevent the default link behavior
+                // Explicitly open the link's href in a new tab
+                window.open(e.currentTarget.href, '_blank'); 
+            });
+
 
             // Firestore Listener
             function setupStudentListener() {
@@ -706,17 +717,20 @@
                 const semesterEl = semesterTemplate.querySelector('.semester-section');
                 semesterEl.dataset.semesterIndex = semesterIndex;
 
-                // NEW: Set active state for calculation mode buttons
                 const isAverageMode = semesterData.calculationMode === 'average';
                 const weightedBtn = semesterEl.querySelector('button[data-mode="weighted"]');
                 const averageBtn = semesterEl.querySelector('button[data-mode="average"]');
 
                 if (isAverageMode) {
                     averageBtn.classList.add('bg-white', 'text-blue-600', 'shadow-sm');
+                    averageBtn.classList.remove('text-gray-500', 'hover:bg-gray-300');
                     weightedBtn.classList.add('text-gray-500', 'hover:bg-gray-300');
+                    weightedBtn.classList.remove('bg-white', 'text-blue-600', 'shadow-sm');
                 } else { // 'weighted' mode
                     weightedBtn.classList.add('bg-white', 'text-blue-600', 'shadow-sm');
+                    weightedBtn.classList.remove('text-gray-500', 'hover:bg-gray-300');
                     averageBtn.classList.add('text-gray-500', 'hover:bg-gray-300');
+                    averageBtn.classList.remove('bg-white', 'text-blue-600', 'shadow-sm');
                 }
 
                 if (!semesterData.name) {
