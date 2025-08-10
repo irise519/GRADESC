@@ -496,17 +496,6 @@
             document.getElementById('status-message').textContent = message;
         }
 
-        // --- Debounce Utility ---
-        let debounceTimer;
-        function debounce(func, delay) {
-            return function(...args) {
-                clearTimeout(debounceTimer);
-                debounceTimer = setTimeout(() => {
-                    func.apply(this, args);
-                }, delay);
-            };
-        }
-
         // Firebase Initialization
         updateStatus('正在初始化 Firebase...');
         try {
@@ -864,10 +853,6 @@
             }
 
             // Data Manipulation (CRUD)
-            const debouncedUpdate = debounce((updatedData) => {
-                updateStudentData(updatedData);
-            }, 500);
-
             async function updateStudentData(studentDataToUpdate) {
                  if (!selectedStudentId || !currentUser) return;
                  const studentDocRef = doc(db, 'users', currentUser.uid, 'students', selectedStudentId);
@@ -958,13 +943,10 @@
                 }
             });
 
-            ui.studentContentContainer.addEventListener('input', (e) => {
-                if (!selectedStudentId) return;
-                const target = e.target;
-                if (!target.closest('.semester-section')) return;
-                
+            function updateLocalDataFromInput(target) {
+                if (!selectedStudentId) return null;
                 let studentData = localStudentsData.find(s => s.id === selectedStudentId);
-                if (!studentData) return;
+                if (!studentData || !target.closest('.semester-section')) return null;
 
                 const semesterSection = target.closest('.semester-section');
                 const courseCard = target.closest('.course-card');
@@ -974,8 +956,6 @@
                 if (target.classList.contains('calculation-mode-toggle')) {
                     const newMode = target.checked ? 'average' : 'weighted';
                     studentData.semesters[semesterIndex].calculationMode = newMode;
-                    // When mode changes, we need to re-render the semester to show/hide weight inputs
-                    renderStudentContent();
                 } else if (target.classList.contains('semester-name-input')) {
                     studentData.semesters[semesterIndex].name = target.value;
                 } else if (courseCard) {
@@ -995,12 +975,24 @@
                         if (target.classList.contains('course-weight-input')) courseData.weight = target.value;
                     }
                 }
-                
-                // Instead of re-rendering, just update calculations locally
+                return studentData;
+            }
+
+            ui.studentContentContainer.addEventListener('input', (e) => {
+                updateLocalDataFromInput(e.target);
                 updateAllCalculations();
-                // Then, save to Firestore after a delay
-                debouncedUpdate({ semesters: studentData.semesters });
             });
+
+            ui.studentContentContainer.addEventListener('change', (e) => {
+                const studentData = updateLocalDataFromInput(e.target);
+                if (studentData) {
+                    if (e.target.classList.contains('calculation-mode-toggle')) {
+                        renderStudentContent();
+                    }
+                    updateStudentData({ semesters: studentData.semesters });
+                }
+            });
+
 
             // Calculation Logic
             function updateAllCalculations() {
