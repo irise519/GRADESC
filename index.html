@@ -13,13 +13,13 @@
     <style>
         body {
             font-family: 'Inter', 'Helvetica Neue', 'Arial', 'sans-serif';
-            background-color: #f8f9fa;  
+            background-color: #f8f9fa;
         }
         .card {
             background-color: white;
             border-radius: 0.75rem;
             box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-            transition: all 0.3s ease-in-out;  
+            transition: all 0.3s ease-in-out;
         }
         .form-input {
             border: 1px solid #d1d5db;
@@ -111,11 +111,11 @@
                         <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"></path>
                         <path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"></path>
                         <path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.222,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"></path>
-                        <path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.574l6.19,5.238C42.022,35.28,44,30.036,44,24C44,22.659,43.862,21.35,43.611,20.083z"></path>  
+                        <path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.574l6.19,5.238C42.022,35.28,44,30.036,44,24C44,22.659,43.862,21.35,43.611,20.083z"></path>
                     </svg>
                     使用 Google 登录
                 </button>
-                <div id="status-message" class="mt-4 text-sm text-gray-600"></div>  
+                <div id="status-message" class="mt-4 text-sm text-gray-600"></div>
             </div>
         </div>
         <div id="app-view" class="max-w-7xl mx-auto" v-cloak>
@@ -133,7 +133,7 @@
                     <span id="user-name" class="font-semibold text-gray-700"></span>
                     <!-- MODIFIED: Changed help button to a link -->
                     <a href="./help.html" target="_blank" id="help-btn" class="btn btn-secondary">帮助</a>
-                    <input type="file" id="import-file-input" class="hidden" accept=".xlsx, .xls">  
+                    <input type="file" id="import-file-input" class="hidden" accept=".xlsx, .xls">
                     <button id="import-btn" class="btn btn-success">导入</button>
                     <button id="download-template-btn" class="btn btn-secondary">下载模板</button>
                     <div class="relative inline-block text-left">
@@ -159,7 +159,7 @@
                     <button id="logout-btn" class="btn btn-secondary">登出</button>
                 </div>
             </header>
-            <div id="add-student-card" class="card p-6 mb-8 fade-in">  
+            <div id="add-student-card" class="card p-6 mb-8 fade-in">
                 <div class="grid md:grid-cols-2 gap-6 items-end">
                     <div class="md:col-span-1">
                         <label for="new-student-name" class="block text-sm font-medium text-gray-600 mb-2">添加新学生</label>
@@ -1025,151 +1025,10 @@
                 calendar.addEventSource(events);
             }
 
-            // Import/Export/Template Logic  
-ui.downloadTemplateBtn.addEventListener('click', () => {
-    const link = document.createElement('a');
-    link.href = './template.xlsx';
-    link.download = 'GRADESC成绩导入模板.xlsx';
-    link.click();
-});
-
-// --- Export Logic Implementation ---
-// 为导出菜单按钮添加点击事件，用于显示/隐藏下拉菜单
-ui.exportMenuBtn.addEventListener('click', (e) => {
-    e.stopPropagation(); // 阻止事件冒泡，防止被document的点击监听器立即关闭
-    ui.exportMenuOptions.classList.toggle('hidden');
-});
-
-// 点击页面其他地方时，关闭导出菜单
-document.addEventListener('click', (e) => {
-    if (!ui.exportMenuBtn.contains(e.target) && !ui.exportMenuOptions.contains(e.target)) {
-        ui.exportMenuOptions.classList.add('hidden');
-    }
-});
-
-// 为“导出为 Excel (.xlsx)”选项添加点击事件
-document.getElementById('export-xlsx').addEventListener('click', async (e) => {
-    e.preventDefault(); // 阻止默认的#跳转行为
-    ui.exportMenuOptions.classList.add('hidden'); // 点击后隐藏菜单
-    
-    // 检查是否有选中的学生
-    if (!selectedStudentId || !currentUser) {
-        showError('无法导出', '请先选择一个学生。');
-        return;
-    }
-
-    const studentData = localStudentsData.find(s => s.id === selectedStudentId);
-    if (!studentData) return;
-
-    try {
-        const exportData = [];
-
-        // 遍历每个学期、课程和评分项目，将数据扁平化为数组
-        studentData.semesters.forEach(semester => {
-            semester.courses.forEach(course => {
-                course.assignments.forEach(assignment => {
-                    exportData.push({
-                        "学期": semester.name,
-                        "课程名称": course.name,
-                        "学期总分权重(%)": course.weight,
-                        "评分项目": assignment.name,
-                        "类型": assignment.type,
-                        "权重(%)": assignment.weight,
-                        "得分": assignment.score,
-                        "满分": assignment.maxScore,
-                        "截止日期": assignment.deadline
-                    });
-                });
-            });
-        });
-
-        // 使用 xlsx 库创建工作表和工作簿
-        const worksheet = XLSX.utils.json_to_sheet(exportData);
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, `${studentData.name}的成绩`);
-
-        // 生成文件名
-        const fileName = `${studentData.name}_成绩_${new Date().toISOString().split('T')[0]}.xlsx`;
-
-        // 触发浏览器下载
-        XLSX.writeFile(workbook, fileName);
-        showSuccess('✅ 数据导出成功！');
-    } catch (error) {
-        showError('导出失败', error.message);
-    }
-});
-
-// 为“导出为 Text (.txt)”选项添加点击事件
-document.getElementById('export-txt').addEventListener('click', (e) => {
-    e.preventDefault();
-    ui.exportMenuOptions.classList.add('hidden');
-    
-    if (!selectedStudentId || !currentUser) {
-        showError('无法导出', '请先选择一个学生。');
-        return;
-    }
-
-    const studentData = localStudentsData.find(s => s.id === selectedStudentId);
-    if (!studentData) return;
-
-    try {
-        // 构建TXT文件的文本内容
-        let txtContent = `GRADESC 成绩导出\n`;
-        txtContent += `学生姓名: ${studentData.name}\n`;
-        txtContent += `导出时间: ${new Date().toLocaleString()}\n`;
-        txtContent += '='.repeat(50) + '\n\n';
-
-        studentData.semesters.forEach(semester => {
-            txtContent += `=== ${semester.name} ===\n`;
-            semester.courses.forEach(course => {
-                txtContent += `  课程: ${course.name} (权重: ${course.weight}%)\n`;
-                course.assignments.forEach(assignment => {
-                    txtContent += `    - ${assignment.name} [${assignment.type}]: ${assignment.score}/${assignment.maxScore} (权重: ${assignment.weight}%) 截止: ${assignment.deadline || '未设置'}\n`;
-                });
-            });
-            txtContent += '\n';
-        });
-
-        // 创建Blob对象并触发下载
-        const blob = new Blob([txtContent], { type: 'text/plain;charset=utf-8' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = `${studentData.name}_成绩_${new Date().toISOString().split('T')[0]}.txt`;
-        link.click();
-        URL.revokeObjectURL(link.href); // 清理内存
-        showSuccess('✅ 数据导出成功！');
-    } catch (error) {
-        showError('导出失败', error.message);
-    }
-});
-
-// （可选）为“清空所有数据”添加功能，注意：这会删除所有数据！
-// document.getElementById('clear-all-data').addEventListener('click', (e) => {
-//     e.preventDefault();
-//     ui.exportMenuOptions.classList.add('hidden');
-//     
-//     if (!selectedStudentId || !currentUser) {
-//         showError('操作失败', '请先选择一个学生。');
-//         return;
-//     }
-// 
-//     showConfirmModal('警告：清空所有数据', '您确定要清空该学生的所有数据吗？此操作无法撤销！', async () => {
-//         try {
-//             const studentRef = doc(db, 'students', selectedStudentId);
-//             await updateDoc(studentRef, { semesters: [] });
-//             showSuccess('所有数据已清空！');
-//             // 重新加载数据
-//             if (studentsUnsubscribe) studentsUnsubscribe();
-//             loadStudentsData();
-//         } catch (error) {
-//             showError('清空数据失败', error.message);
-//         }
-//     });
-// });
-            
+            // Import/Export/Template Logic
             const TEMPLATE_HEADERS = [ "学期", "课程名称", "学期总分权重(%)", "评分项目", "类型", "权重(%)", "得分", "满分", "截止日期" ];
 
-            ui.downloadTemplateBtn.addEventListener('click', () => {  
+            ui.downloadTemplateBtn.addEventListener('click', () => {
                 const sampleData = [
                     { "学期": "2024-2025学年 第一学期", "课程名称": "计算机科学导论", "学期总分权重(%)": 30, "评分项目": "期中考试", "类型": "期中考试", "权重(%)": 40, "得分": 85, "满分": 100, "截止日期": "2025-10-25" },
                     { "学期": "2024-2025学年 第一学期", "课程名称": "计算机科学导论", "学期总分权重(%)": 30, "评分项目": "期末项目", "类型": "项目", "权重(%)": 60, "得分": 92, "满分": 100, "截止日期": "2025-12-15" },
@@ -1182,8 +1041,8 @@ document.getElementById('export-txt').addEventListener('click', (e) => {
                 showSuccess('模板下载成功！');
             });
 
-            ui.exportMenu.btn.addEventListener('click', (e) => { ... }); 
-                if (!selectedStudentId) {  
+            ui.importBtn.addEventListener('click', () => {
+                if (!selectedStudentId) {
                     showError("请先选择一个学生以导入数据。");
                     return;
                 }
@@ -1195,7 +1054,7 @@ document.getElementById('export-txt').addEventListener('click', (e) => {
                 if (!file) return;
 
                 const reader = new FileReader();
-                reader.onload = (e) => {  
+                reader.onload = (e) => {
                     try {
                         const data = new Uint8Array(e.target.result);
                         const workbook = XLSX.read(data, {type: 'array', cellDates:true});
@@ -1237,12 +1096,12 @@ document.getElementById('export-txt').addEventListener('click', (e) => {
                     if (!semesterName || !courseName) return;
 
                     if (!semestersMap.has(semesterName)) {
-                        semestersMap.set(semesterName, { name: semesterName, courses: new Map() });  
+                        semestersMap.set(semesterName, { name: semesterName, courses: new Map() });
                     }
                     const semester = semestersMap.get(semesterName);
 
                     if (!semester.courses.has(courseName)) {
-                        semester.courses.set(courseName, {  
+                        semester.courses.set(courseName, {
                             name: courseName,
                             weight: row['学期总分权重(%)'] || '0',
                             assignments: []
@@ -1275,8 +1134,7 @@ document.getElementById('export-txt').addEventListener('click', (e) => {
                 });
             }
 
-            // ... Export Logic ...  
-          
+            // ... Export Logic ...
 
         } catch (error) {
             console.error("初始化失败:", error);
