@@ -64,11 +64,10 @@
             <button id="import-btn" class="btn btn-primary">导入成绩</button>
         </div>
 
-        <!-- 学年模块输入区域：改为垂直堆叠 -->
-        <div class="grid grid-cols-1 gap-8"> <!-- 修改点1：移除了 lg:grid-cols-2，只保留 grid-cols-1 -->
-
+        <!-- 学年模块输入区域：垂直堆叠 -->
+        <div class="grid grid-cols-1 gap-8">
             <!-- 倒数第二学年 -->
-            <div class="card p-6 mb-8"> <!-- 修改点2：添加 mb-8 以增加与下一个卡片的间距 -->
+            <div class="card p-6 mb-8">
                 <h2 class="text-2xl font-bold text-gray-700 mb-4">倒数第二学年 (Penultimate Year)</h2>
                 <table class="w-full text-left">
                     <thead>
@@ -87,7 +86,7 @@
             </div>
 
             <!-- 最后一学年 -->
-            <div class="card p-6 mb-8"> <!-- 修改点3：同样添加 mb-8 -->
+            <div class="card p-6 mb-8">
                 <h2 class="text-2xl font-bold text-gray-700 mb-4">最后一学年 (Final Year)</h2>
                 <table class="w-full text-left">
                     <thead>
@@ -105,35 +104,51 @@
                 </table>
                 <button id="add-final-module" class="btn btn-primary mt-4 w-full">添加模块</button>
             </div>
-
         </div>
 
-        <!-- 结果和说明部分保持不变 -->
+        <!-- 权重选择 -->
+        <div class="card p-6 mb-4">
+            <label class="block text-lg font-semibold text-gray-700 mb-2">选择加权方式：</label>
+            <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-6">
+                <label class="flex items-center">
+                    <input type="radio" name="weight-mode" value="1:1" class="mr-2 h-4 w-4">
+                    <span>第二年 : 第三年 = 1 : 1</span>
+                </label>
+                <label class="flex items-center">
+                    <input type="radio" name="weight-mode" value="1:2" class="mr-2 h-4 w-4" checked>
+                    <span>第二年 : 第三年 = 1 : 2（官方默认）</span>
+                </label>
+            </div>
+        </div>
+
+        <!-- 计算结果 -->
         <div class="card p-8 mt-8">
             <h2 class="text-3xl font-bold text-gray-800 mb-6 text-center">计算结果</h2>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
                 <div>
                     <h3 class="text-lg font-semibold text-gray-600">倒数第二学年平均分</h3>
-                    <p id="penultimate-average" class="text-4xl font-extrabold text-gray-700 mt-2">0.00</p>
+                    <p id="penultimate-average" class="text-4xl font-extrabold text-gray-700 mt-2">0</p>
                 </div>
                 <div>
                     <h3 class="text-lg font-semibold text-gray-600">最后一学年平均分</h3>
-                    <p id="final-average" class="text-4xl font-extrabold text-gray-700 mt-2">0.00</p>
+                    <p id="final-average" class="text-4xl font-extrabold text-gray-700 mt-2">0</p>
                 </div>
                 <div class="md:col-span-3 border-t pt-6 mt-6 md:border-t-0 md:pt-0 md:mt-0 md:border-l md:pl-6">
                     <h3 class="text-xl font-bold text-gray-600">最终学位加权平均分</h3>
-                    <p class="text-gray-500 text-sm">(Y2 Avg * 1 + Y3 Avg * 2) / 3</p>
-                    <p id="final-classification-score" class="text-6xl font-extrabold text-blue-600 my-3">0.00</p>
+                    <p class="text-gray-500 text-sm" id="weight-formula">(Y2 Avg × 1 + Y3 Avg × 2) ÷ 3</p>
+                    <p id="final-classification-score" class="text-6xl font-extrabold text-blue-600 my-3">0</p>
                     <p id="final-classification-grade" class="text-3xl font-bold">-</p>
                 </div>
             </div>
         </div>
 
+        <!-- 说明 -->
         <div class="card p-6 mt-8 text-gray-700 text-sm">
             <h3 class="text-lg font-bold mb-3">计算规则说明</h3>
             <ul class="list-disc list-inside space-y-2">
-                <li>学位等级根据倒数第二学年 (Penultimate Year) 和最后一学年 (Final Year) 的加权平均分计算。</li>
-                <li>最终加权分 = (倒数第二学年平均分 × 1 + 最后一学年平均分 × 2) / 3。</li>
+                <li>学位等级根据倒数第二学年和最后一学年的加权平均分计算。</li>
+                <li>用户可选择 <strong>1:1</strong> 或 <strong>1:2</strong> 的权重比例。</li>
+                <li>所有平均分（包括最终）均按<strong>四舍五入取整</strong>显示（如 67.8 → 68）。</li>
                 <li>学年平均分 = (所有模块的[分数 × 学分]之和) / (该学年总学分)。</li>
                 <li><strong>技能发现模块 (Skills Discovery Modules):</strong> 如果在最后一学年修读了此类模块，其分数和学分将被计入倒数第二学年用于计算。</li>
                 <li class="mt-4"><strong>学位等级划分:</strong>
@@ -151,16 +166,30 @@
     </div>
 
     <script>
-        // ... 脚本部分完全保持不变 ...
         document.addEventListener('DOMContentLoaded', () => {
             const penultimateBody = document.getElementById('penultimate-year-modules');
             const finalBody = document.getElementById('final-year-modules');
             const importInput = document.getElementById('import-input');
+            const weightFormula = document.getElementById('weight-formula');
+
             document.getElementById('add-penultimate-module').addEventListener('click', () => addModuleRow(penultimateBody, false));
             document.getElementById('add-final-module').addEventListener('click', () => addModuleRow(finalBody, true));
             document.getElementById('import-btn').addEventListener('click', () => importInput.click());
             document.getElementById('download-template-btn').addEventListener('click', downloadTemplate);
             importInput.addEventListener('change', handleImport);
+
+            // 监听权重选择变化
+            document.querySelectorAll('input[name="weight-mode"]').forEach(input => {
+                input.addEventListener('change', () => {
+                    const mode = input.value;
+                    if (mode === '1:1') {
+                        weightFormula.textContent = '(Y2 Avg × 1 + Y3 Avg × 1) ÷ 2';
+                    } else {
+                        weightFormula.textContent = '(Y2 Avg × 1 + Y3 Avg × 2) ÷ 3';
+                    }
+                    calculateAll();
+                });
+            });
 
             function createModuleRow(isFinalYear, data = {}) {
                 const tr = document.createElement('tr');
@@ -175,7 +204,7 @@
                         <td class="p-2 text-center"><input type="checkbox" class="discovery-checkbox h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" ${data.isDiscovery ? 'checked' : ''}></td>
                     `;
                 } else {
-                     innerHTML += '<td class="p-2"></td>';
+                    innerHTML += '<td class="p-2"></td>';
                 }
                 innerHTML += `
                     <td class="p-2 text-right"><button class="remove-row-btn btn btn-danger p-2">×</button></td>
@@ -189,10 +218,10 @@
                 tbody.appendChild(row);
                 attachRowListeners(row);
                 if (!data && tbody.children.length === 1) {
-                    for(let i=0; i<3; i++) {
-                         const extraRow = createModuleRow(isFinalYear);
-                         tbody.appendChild(extraRow);
-                         attachRowListeners(extraRow);
+                    for (let i = 0; i < 3; i++) {
+                        const extraRow = createModuleRow(isFinalYear);
+                        tbody.appendChild(extraRow);
+                        attachRowListeners(extraRow);
                     }
                 }
             }
@@ -236,18 +265,40 @@
                 const penultimateWithDiscoveryRows = penultimateRows.concat(discoveryModules);
                 const penultimateAvg = calculateYearAverage(penultimateWithDiscoveryRows);
                 const finalAvg = calculateYearAverage(standardFinalModules);
-                document.getElementById('penultimate-average').textContent = penultimateAvg.toFixed(2);
-                document.getElementById('final-average').textContent = finalAvg.toFixed(2);
-                const classificationScore = (penultimateAvg * 1 + finalAvg * 2) / 3;
+
+                // 四舍五入取整
+                const penultimateAvgRounded = Math.round(penultimateAvg);
+                const finalAvgRounded = Math.round(finalAvg);
+
+                document.getElementById('penultimate-average').textContent = penultimateAvgRounded;
+                document.getElementById('final-average').textContent = finalAvgRounded;
+
+                // 获取权重
+                const weightMode = document.querySelector('input[name="weight-mode"]:checked').value;
+                let weight2, weight3;
+                if (weightMode === '1:1') {
+                    weight2 = 1;
+                    weight3 = 1;
+                } else {
+                    weight2 = 1;
+                    weight3 = 2;
+                }
+
+                const classificationScore = (penultimateAvg * weight2 + finalAvg * weight3) / (weight2 + weight3);
+                const classificationScoreRounded = Math.round(classificationScore);
+
                 const scoreDisplay = document.getElementById('final-classification-score');
                 const gradeDisplay = document.getElementById('final-classification-grade');
+
                 if (isNaN(classificationScore) || classificationScore === 0) {
-                    scoreDisplay.textContent = '0.00';
+                    scoreDisplay.textContent = '0';
                     gradeDisplay.textContent = '-';
                     gradeDisplay.className = 'text-3xl font-bold';
                     return;
                 }
-                scoreDisplay.textContent = classificationScore.toFixed(2);
+
+                scoreDisplay.textContent = classificationScoreRounded;
+
                 let grade = '';
                 let gradeClass = '';
                 if (classificationScore >= 70) {
@@ -321,7 +372,7 @@
                     };
                     const year = (row["Year"] || '').toLowerCase();
                     if (year.includes('penultimate')) {
-                        addModuleRow(penultimateBody, false, moduleData);  
+                        addModuleRow(penultimateBody, false, moduleData);
                     } else if (year.includes('final')) {
                         addModuleRow(finalBody, true, moduleData);
                     }
@@ -329,8 +380,12 @@
                 calculateAll();
             }
 
+            // 初始化行
             addModuleRow(penultimateBody, false);
             addModuleRow(finalBody, true);
+
+            // 默认显示公式
+            weightFormula.textContent = '(Y2 Avg × 1 + Y3 Avg × 2) ÷ 3';
         });
     </script>
 </body>
