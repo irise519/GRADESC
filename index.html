@@ -567,9 +567,8 @@
                     initializeCalendar();
                     setupStudentListener();
                     
-                    // Check if the tour should be shown
                     if (!localStorage.getItem('hasSeenTour')) {
-                        setTimeout(startTour, 1000); // Delay to allow UI to render
+                        setTimeout(startTour, 1500); 
                         localStorage.setItem('hasSeenTour', 'true');
                     }
 
@@ -597,7 +596,15 @@
                 const q = query(studentsColRef, orderBy("name"));
                 if (studentsUnsubscribe) studentsUnsubscribe();
                 studentsUnsubscribe = onSnapshot(q, (snapshot) => {
+                    const hadData = localStudentsData.length > 0;
                     localStudentsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    
+                    if (!hadData && localStudentsData.length > 0) {
+                        selectedStudentId = localStudentsData[0].id;
+                    } else if (localStudentsData.length === 0) {
+                        selectedStudentId = null;
+                    }
+
                     renderSidebarStudentList();
                     renderStudentContent();
                     updateCalendarEvents();
@@ -613,7 +620,6 @@
                 ui.sidebarStudentList.innerHTML = '';
                 if (localStudentsData.length === 0) {
                     ui.sidebarStudentList.innerHTML = '<li class="text-gray-500">没有学生数据。</li>';
-                    selectedStudentId = null;
                     return;
                 }
                 localStudentsData.forEach(student => {
@@ -621,15 +627,6 @@
                     li.innerHTML = `<a href="#" data-id="${student.id}" class="student-link block p-2 rounded-md hover:bg-gray-100 ${student.id === selectedStudentId ? 'bg-blue-100 text-blue-700 font-semibold' : ''}">${student.name}</a>`;
                     ui.sidebarStudentList.appendChild(li);
                 });
-
-                if (!selectedStudentId && localStudentsData.length > 0) {
-                    selectedStudentId = localStudentsData[0].id;
-                }
-                
-                const activeLink = ui.sidebarStudentList.querySelector(`[data-id="${selectedStudentId}"]`);
-                if(activeLink) {
-                    activeLink.classList.add('bg-blue-100', 'text-blue-700', 'font-semibold');
-                }
             }
             
             ui.sidebarStudentList.addEventListener('click', (e) => {
@@ -1183,15 +1180,7 @@
                 });
             }
 
-            // Export Logic
-            const EXPORT_HEADERS = [ "学生姓名", "学期", "课程名称", "学期总分权重(%)", "课程总分", "对学期总分贡献", "评分项目", "类型", "权重(%)", "得分", "满分", "截止日期" ];
-            
-            function getExportData() {
-                // This function needs a helper to re-calculate latest grades before exporting
-                return []; // Simplified for brevity, original logic is complex
-            }
-            
-            // ... Other export functions (TXT, DOC, XLSX) and clear data would go here ...
+            // ... Export Logic ...
 
             // New User Tour Logic
             ui.helpBtn.addEventListener('click', startTour);
@@ -1202,7 +1191,7 @@
                     defaultStepOptions: {
                         classes: 'shadow-md bg-white',
                         scrollTo: true,
-                         buttons: [
+                        buttons: [
                             { text: '上一步', action: function() { return this.back(); }, classes: 'shepherd-button-secondary' },
                             { text: '下一步', action: function() { return this.next(); } }
                         ]
@@ -1238,14 +1227,36 @@
                     text: '所有学生的作业截止日期都会在这里以日历形式显示，方便您一目了然。',
                     attachTo: { element: '#calendar-card', on: 'bottom' }
                 });
-                
+
+                // Interactive step: Add Semester
                 tour.addStep({
                     title: '添加新学期',
-                    text: '为当前选中的学生添加一个新的学期。',
-                    attachTo: { element: '#add-semester-btn', on: 'top' }
+                    text: '现在，请为当前选中的学生点击“添加新学期”按钮来创建一个学期。',
+                    attachTo: { element: '#add-semester-btn', on: 'top' },
+                    buttons: [], // No buttons, user must click the element
+                    advanceOn: { selector: '#add-semester-btn', event: 'click' }
                 });
 
-                tour.on('complete', () => {  
+                // This step appears AFTER the user adds a semester
+                tour.addStep({
+                    title: '管理学期',
+                    text: '太棒了！您已经创建了一个新学期。您可以在这里修改学期名称或添加课程。',
+                    attachTo: { 
+                        element: '.semester-section .add-course-btn', 
+                        on: 'bottom'
+                    },
+                    when: {
+                        show: () => {
+                            // Ensure the element exists before showing the step
+                            const el = document.querySelector('.semester-section .add-course-btn');
+                            if (!el) {
+                                tour.cancel(); // Cancel if element not found
+                            }
+                        }
+                    }
+                });
+                
+                tour.on('complete', () => {
                     showSuccess("向导结束！祝您使用愉快。");
                 });
                  tour.on('cancel', () => {
