@@ -19,7 +19,11 @@
             background-color: white;
             border-radius: 0.75rem;
             box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-            transition: all 0.3s ease-in-out;
+            transition: all 0.2s ease-in-out;
+        }
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
         }
         .form-input {
             border: 1px solid #d1d5db;
@@ -175,7 +179,7 @@
             </div>
         </div>
         <div id="app-view" class="max-w-7xl mx-auto" v-cloak>
-            <header class="flex flex-col md:flex-row justify-between items-center mb-6">
+            <header class="flex justify-between items-center mb-6">
                 <div class="flex items-center">
                     <button id="sidebar-toggle" class="md:hidden mr-4 p-2 rounded-md hover:bg-gray-200">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -184,54 +188,60 @@
                     </button>
                     <h1 class="text-3xl md:text-4xl font-extrabold text-gray-800">分数计算与统计</h1>
                 </div>
-                <div id="user-profile" class="flex items-center space-x-2 md:space-x-4 mt-4 md:mt-0">
-                    <img id="user-avatar" class="w-10 h-10 rounded-full" src="" alt="User Avatar">
-                    <span id="user-name" class="font-semibold text-gray-700"></span>
+                
+                <!-- NEW: Unified User Menu -->
+                <div class="relative inline-block text-left">
+                    <button type="button" id="user-menu-btn" class="inline-flex items-center gap-x-2 rounded-full p-1 pr-3 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
+                        <img id="user-avatar" class="w-8 h-8 rounded-full bg-gray-200" src="" alt="User Avatar">
+                        <span id="user-name" class="hidden md:block"></span>
+                        <svg class="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
+                        </svg>
+                    </button>
                     
-                    <!-- GPA Calculator Dropdown -->
-                    <div class="relative inline-block text-left">
-                        <div>
-                            <button type="button" id="gpa-tools-menu-btn" class="btn btn-secondary">
-                                大学GPA工具
-                                <svg class="-mr-1 h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                                    <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
-                                </svg>
-                            </button>
-                        </div>
-                        <div id="gpa-tools-menu-options" class="absolute right-0 z-10 mt-2 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none hidden" role="menu" aria-orientation="vertical" aria-labelledby="gpa-tools-menu-btn">
-                            <div class="py-1" role="none">
-                                <a href="./leeds-gpa.html" target="_blank" class="text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" role="menuitem" tabindex="-1">利兹大学 (University of Leeds)</a>
-                                <!-- Add other universities here in the future -->
-                            </div>
-                        </div>
+                    <div id="user-menu-options" class="absolute right-0 z-10 mt-2 w-64 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none hidden" role="menu" aria-orientation="vertical">
+                        <!-- Data Management Section -->
+                        <div class="px-4 py-2 text-xs text-gray-500">数据管理</div>
+                        <a href="#" id="import-btn" class="flex items-center gap-x-3 text-gray-700 px-4 py-2 text-sm hover:bg-gray-100" role="menuitem">
+                           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd" /></svg>
+                           <span>导入成绩</span>
+                        </a>
+                        <a href="#" id="download-template-btn" class="flex items-center gap-x-3 text-gray-700 px-4 py-2 text-sm hover:bg-gray-100" role="menuitem">
+                           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
+                           <span>下载模板</span>
+                        </a>
+                        <a href="#" id="export-xlsx" class="flex items-center gap-x-3 text-gray-700 px-4 py-2 text-sm hover:bg-gray-100" role="menuitem">
+                           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor"><path d="M2 6a2 2 0 012-2h12a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM6 12a2 2 0 100-4 2 2 0 000 4z" /></svg>
+                           <span>导出为 Excel (.xlsx)</span>
+                        </a>
+                        <a href="#" id="export-txt" class="flex items-center gap-x-3 text-gray-700 px-4 py-2 text-sm hover:bg-gray-100" role="menuitem">
+                           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a1 1 0 110 2h-3a1 1 0 01-1-1v-2a1 1 0 00-1-1H9a1 1 0 00-1 1v2a1 1 0 01-1 1H4a1 1 0 110-2V4zm2 4a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h4a1 1 0 100-2H7z" clip-rule="evenodd" /></svg>
+                           <span>导出为 Text (.txt)</span>
+                        </a>
+                        <!-- GPA Tools Section -->
+                        <div class="border-t border-gray-200 my-1"></div>
+                        <div class="px-4 py-2 text-xs text-gray-500">大学GPA工具</div>
+                        <a href="./leeds-gpa.html" target="_blank" class="flex items-center gap-x-3 text-gray-700 px-4 py-2 text-sm hover:bg-gray-100" role="menuitem">
+                           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor"><path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L9 9.61V16a1 1 0 001 1h2a1 1 0 001-1v-6.39l6.394-2.69a1 1 0 000-1.84l-7-3zM10 8L3 5.39 10 3l7 2.39L10 8z" /></svg>
+                           <span>利兹大学 (UoL)</span>
+                        </a>
+                        <!-- Account Section -->
+                        <div class="border-t border-gray-200 my-1"></div>
+                        <a href="#" id="help-btn" class="flex items-center gap-x-3 text-gray-700 px-4 py-2 text-sm hover:bg-gray-100" role="menuitem">
+                           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" /></svg>
+                           <span>帮助</span>
+                        </a>
+                        <a href="#" id="clear-all-data" class="flex items-center gap-x-3 text-red-600 px-4 py-2 text-sm hover:bg-red-50" role="menuitem">
+                           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.22 3.009-1.742 3.009H4.42c-1.522 0-2.492-1.675-1.742-3.009l5.58-9.92zM10 13a1 1 0 110-2 1 1 0 010 2zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
+                           <span>清空所有数据</span>
+                        </a>
+                        <a href="#" id="logout-btn" class="flex items-center gap-x-3 text-gray-700 px-4 py-2 text-sm hover:bg-gray-100" role="menuitem">
+                           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V5.414l7.293 7.293a1 1 0 001.414-1.414L5.414 4H15a1 1 0 100-2H4a1 1 0 00-1 1z" clip-rule="evenodd" /></svg>
+                           <span>登出</span>
+                        </a>
                     </div>
-
-                    <a href="./help.html" target="_blank" id="help-btn" class="btn btn-secondary">帮助</a>
-                    <input type="file" id="import-file-input" class="hidden" accept=".xlsx, .xls">
-                    <button id="import-btn" class="btn btn-success">导入</button>
-                    <button id="download-template-btn" class="btn btn-secondary">下载模板</button>
-                    <div class="relative inline-block text-left">
-                        <div>
-                            <button type="button" id="export-menu-btn" class="inline-flex w-full justify-center gap-x-1.5 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50" aria-expanded="false" aria-haspopup="true">
-                                导出
-                                <svg class="-mr-1 h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                                    <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
-                                </svg>
-                            </button>
-                        </div>
-                        <div id="export-menu-options" class="absolute right-0 z-10 mt-2 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none hidden" role="menu" aria-orientation="vertical" aria-labelledby="export-menu-btn">
-                            <div class="py-1" role="none">
-                                <a href="#" id="export-txt" class="text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" role="menuitem" tabindex="-1">为 Text (.txt)</a>
-                                <a href="#" id="export-doc" class="text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" role="menuitem" tabindex="-1">为 Word (.doc)</a>
-                                <a href="#" id="export-xlsx" class="text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" role="menuitem" tabindex="-1">为 Excel (.xlsx)</a>
-                            </div>
-                            <div class="border-t border-gray-200 py-1">
-                                <a href="#" id="clear-all-data" class="text-red-600 block px-4 py-2 text-sm hover:bg-red-50" role="menuitem" tabindex="-1">清空所有数据</a>
-                            </div>
-                        </div>
-                    </div>
-                    <button id="logout-btn" class="btn btn-secondary">登出</button>
                 </div>
+                <input type="file" id="import-file-input" class="hidden" accept=".xlsx, .xls">
             </header>
             <div id="add-student-card" class="card p-6 mb-8 fade-in">
                 <div class="grid md:grid-cols-2 gap-6 items-end">
@@ -544,17 +554,13 @@
                     gpa: document.getElementById('overall-gpa-display'),
                     score: document.getElementById('overall-weighted-score-display'),
                 },
-                exportMenu: {
-                    btn: document.getElementById('export-menu-btn'),
-                    options: document.getElementById('export-menu-options'),
+                userMenu: {
+                    btn: document.getElementById('user-menu-btn'),
+                    options: document.getElementById('user-menu-options'),
                     exportTxt: document.getElementById('export-txt'),
-                    exportDoc: document.getElementById('export-doc'),
                     exportXlsx: document.getElementById('export-xlsx'),
                     clearAllData: document.getElementById('clear-all-data'),
-                },
-                gpaToolsMenu: {
-                    btn: document.getElementById('gpa-tools-menu-btn'),
-                    options: document.getElementById('gpa-tools-menu-options'),
+                    logoutBtn: document.getElementById('logout-btn'),
                 }
             };
 
@@ -636,7 +642,10 @@
 
             // Login/Logout
             document.getElementById('login-btn').addEventListener('click', () => signInWithPopup(auth, provider).catch(err => showError('登录失败', err.message)));
-            document.getElementById('logout-btn').addEventListener('click', () => signOut(auth).catch(err => showError('登出失败', err.message)));
+            ui.userMenu.logoutBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                signOut(auth).catch(err => showError('登出失败', err.message))
+            });
 
             // Firestore Listener
             function setupStudentListener() {
@@ -653,7 +662,6 @@
                     } else if (localStudentsData.length === 0) {
                         selectedStudentId = null;
                     } else if (selectedStudentId && !localStudentsData.some(s => s.id === selectedStudentId)) {
-                        // If the selected student was deleted, select the first one or null
                         selectedStudentId = localStudentsData.length > 0 ? localStudentsData[0].id : null;
                     }
 
@@ -722,7 +730,6 @@
                     const newActiveEl = findElementByPath(activeElPath);
                     if (newActiveEl) {
                         newActiveEl.focus();
-                        // Restore cursor position for input fields
                         if (activeEl.tagName === 'INPUT' && typeof activeEl.selectionStart === 'number') {
                             newActiveEl.selectionStart = activeEl.selectionStart;
                             newActiveEl.selectionEnd = activeEl.selectionEnd;
@@ -740,12 +747,11 @@
                     const parent = current.parentElement;
                     if (!parent) break;
                     const index = Array.from(parent.children).indexOf(current);
-                    // Use a more specific selector if possible
                     const part = { 
                         tag: current.tagName, 
                         index: index, 
-                        className: current.className, // Using className for better matching
-                        dataset: { ...current.dataset } // Using data attributes for robust matching
+                        className: current.className,
+                        dataset: { ...current.dataset }
                     };
                     path.unshift(part);
                     current = parent;
@@ -758,7 +764,6 @@
                 for (const part of path) {
                     if (!current) return null;
                     const children = Array.from(current.children);
-                    // Try to find a more precise match first
                     let found = false;
                     for(let i = 0; i < children.length; i++) {
                         const child = children[i];
@@ -768,7 +773,6 @@
                             break;
                         }
                     }
-                    // Fallback to index if specific match fails
                     if(!found) { current = children[part.index]; }
                 }
                 return current;
@@ -780,13 +784,11 @@
                 const semesterEl = semesterTemplate.querySelector('.semester-section');
                 semesterEl.dataset.semesterIndex = semesterIndex;
 
-                // Set calculation mode
                 const modeToggle = semesterEl.querySelector('.calculation-mode-toggle');
                 const isAverageMode = semesterData.calculationMode === 'average';
                 modeToggle.checked = isAverageMode;
 
                 if (!semesterData.name) {
-                    // Auto-generate semester name logic
                     let nextYear = new Date().getFullYear();
                     let semesterNum = 1;
                     if (semesterIndex > 0) {
@@ -814,7 +816,6 @@
                     });
                 }
                 
-                // Toggle course weight visibility based on mode
                 const courseWeightContainers = semesterEl.querySelectorAll('.course-weight-container');
                 courseWeightContainers.forEach(c => c.style.display = isAverageMode ? 'none' : 'block');
 
@@ -858,7 +859,6 @@
                  if (!selectedStudentId || !currentUser) return;
                  const studentDocRef = doc(db, 'users', currentUser.uid, 'students', selectedStudentId);
                  try {
-                     // We pass the specific field to update, not the whole object
                      await updateDoc(studentDocRef, studentDataToUpdate);
                  } catch (error) {
                      showError('数据更新失败', error.message);
@@ -876,7 +876,7 @@
                 const newStudent = { name: name, semesters: [{ name: '', courses: [], calculationMode: 'weighted' }] };
                 try {
                     const docRef = await addDoc(collection(db, 'users', currentUser.uid, 'students'), newStudent);
-                    selectedStudentId = docRef.id; // Switch to the new student
+                    selectedStudentId = docRef.id;
                     nameInput.value = '';
                     showSuccess('学生添加成功！');
                 } catch (e) { showError('添加学生失败', e.message); }
@@ -891,7 +891,7 @@
                     async () => {
                         try {
                             await deleteDoc(doc(db, 'users', currentUser.uid, 'students', selectedStudentId));
-                            selectedStudentId = null; // Reset selection
+                            selectedStudentId = null;
                             showSuccess('学生删除成功！');
                         } catch (e) { showError('删除学生失败', e.message); }
                     }
@@ -945,7 +945,6 @@
                 }
             });
 
-            // Use 'input' event for real-time updates instead of 'change'
             ui.studentContentContainer.addEventListener('input', (e) => {
                 if (!selectedStudentId) return;
                 const target = e.target;
@@ -1053,7 +1052,6 @@
                     }
                 });
 
-                // Update UI based on mode
                 const scoreLabel = semesterEl.querySelector('.semester-score-label');
                 scoreLabel.textContent = isAverageMode ? '学期均分' : '学期总分';
                 const courseWeightContainers = semesterEl.querySelectorAll('.course-weight-container');
@@ -1063,14 +1061,12 @@
                 const weightedScoreDisplay = semesterEl.querySelector('.semester-weighted-score-display');
                 const averageScoreDisplay = semesterEl.querySelector('.semester-average-score-display');
                 
-                // GPA Calculation
                 if (totalWeightForGpa > 0) {
                     gpaDisplay.textContent = (totalQualityPoints / totalWeightForGpa).toFixed(2);
                 } else {
                     gpaDisplay.textContent = 'N/A';
                 }
 
-                // Main Score Display (Mode-dependent)
                 if (isAverageMode) {
                     semesterCalculatedScore = gradedCoursesCount > 0 ? simpleAverageScoreSum / gradedCoursesCount : 0;
                 } else {
@@ -1085,7 +1081,6 @@
                     semesterData.semesterTotalScore = 0;
                 }
 
-                // Always-on Average Score Display
                 if (gradedCoursesCount > 0) {
                     const simpleAverage = simpleAverageScoreSum / gradedCoursesCount;
                     averageScoreDisplay.textContent = simpleAverage.toFixed(2);
@@ -1191,7 +1186,8 @@
             // Import/Export/Template Logic
             const TEMPLATE_HEADERS = [ "学期", "课程名称", "学期总分权重(%)", "评分项目", "类型", "权重(%)", "得分", "满分", "截止日期" ];
 
-            ui.downloadTemplateBtn.addEventListener('click', () => {
+            ui.downloadTemplateBtn.addEventListener('click', (e) => {
+                e.preventDefault();
                 const sampleData = [
                     { "学期": "2024-2025学年 第一学期", "课程名称": "计算机科学导论", "学期总分权重(%)": 30, "评分项目": "期中考试", "类型": "期中考试", "权重(%)": 40, "得分": 85, "满分": 100, "截止日期": "2025-10-25" },
                     { "学期": "2024-2025学年 第一学期", "课程名称": "计算机科学导论", "学期总分权重(%)": 30, "评分项目": "期末项目", "类型": "项目", "权重(%)": 60, "得分": 92, "满分": 100, "截止日期": "2025-12-15" },
@@ -1204,7 +1200,8 @@
                 showSuccess('模板下载成功！');
             });
 
-            ui.importBtn.addEventListener('click', () => {
+            ui.importBtn.addEventListener('click', (e) => {
+                e.preventDefault();
                 if (!selectedStudentId) {
                     showError("请先选择一个学生以导入数据。");
                     return;
@@ -1274,7 +1271,6 @@
 
                     if (row['评分项目']) {
                         let deadline = row['截止日期'];
-                        // Handle Excel date serial number format
                         if (typeof deadline === 'number') {
                            deadline = new Date(Math.round((deadline - 25569) * 86400 * 1000)).toISOString().split('T')[0];
                         } else if (deadline instanceof Date) {
@@ -1299,29 +1295,23 @@
             }
 
             // --- Menu Logic ---
-            
             function setupMenu(button, menu) {
-                 button.addEventListener('click', () => {
+                 button.addEventListener('click', (e) => {
+                    e.stopPropagation();
                     const isExpanded = button.getAttribute('aria-expanded') === 'true';
                     button.setAttribute('aria-expanded', !isExpanded);
                     menu.classList.toggle('hidden');
                 });
             }
             
-            setupMenu(ui.exportMenu.btn, ui.exportMenu.options);
-            setupMenu(ui.gpaToolsMenu.btn, ui.gpaToolsMenu.options);
+            setupMenu(ui.userMenu.btn, ui.userMenu.options);
 
             document.addEventListener('click', (event) => {
-                if (!ui.exportMenu.btn.contains(event.target) && !ui.exportMenu.options.contains(event.target)) {
-                    ui.exportMenu.btn.setAttribute('aria-expanded', 'false');
-                    ui.exportMenu.options.classList.add('hidden');
-                }
-                 if (!ui.gpaToolsMenu.btn.contains(event.target) && !ui.gpaToolsMenu.options.contains(event.target)) {
-                    ui.gpaToolsMenu.btn.setAttribute('aria-expanded', 'false');
-                    ui.gpaToolsMenu.options.classList.add('hidden');
+                if (!ui.userMenu.btn.contains(event.target) && !ui.userMenu.options.contains(event.target)) {
+                    ui.userMenu.btn.setAttribute('aria-expanded', 'false');
+                    ui.userMenu.options.classList.add('hidden');
                 }
             });
-
 
             function downloadFile(content, fileName, mimeType) {
                 const a = document.createElement('a');
@@ -1370,7 +1360,7 @@
                 return { student, flatData };
             }
 
-            ui.exportMenu.exportXlsx.addEventListener('click', (e) => {
+            ui.userMenu.exportXlsx.addEventListener('click', (e) => {
                 e.preventDefault();
                 const exportData = prepareExportData();
                 if (!exportData) return;
@@ -1382,7 +1372,7 @@
                 showSuccess('Excel 文件导出成功！');
             });
 
-            ui.exportMenu.exportTxt.addEventListener('click', (e) => {
+            ui.userMenu.exportTxt.addEventListener('click', (e) => {
                 e.preventDefault();
                 const exportData = prepareExportData();
                 if (!exportData) return;
@@ -1407,39 +1397,7 @@
                 showSuccess('TXT 文件导出成功！');
             });
 
-            ui.exportMenu.exportDoc.addEventListener('click', (e) => {
-                e.preventDefault();
-                const exportData = prepareExportData();
-                if (!exportData) return;
-
-                let content = `<h1>学生: ${exportData.student.name}</h1>`;
-                content += `<p>导出日期: ${new Date().toLocaleDateString()}</p>`;
-                content += "<hr>";
-
-                exportData.student.semesters.forEach(semester => {
-                    content += `<h2>学期: ${semester.name} (计算模式: ${semester.calculationMode === 'average' ? '均分' : '加权'})</h2>`;
-                    semester.courses.forEach(course => {
-                        content += `<h3>课程: ${course.name} (学期权重: ${course.weight}%)</h3>`;
-                        content += '<ul>';
-                        course.assignments.forEach(a => {
-                            content += `<li>${a.name} (${a.type || 'N/A'}): 得分 ${a.score || '-'} / ${a.maxScore || '100'}, 权重 ${a.weight}%, DDL: ${a.deadline || 'N/A'}</li>`;
-                        });
-                        content += '</ul>';
-                    });
-                });
-                
-                const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' " +
-                    "xmlns:w='urn:schemas-microsoft-com:office:word' " +
-                    "xmlns='http://www.w3.org/TR/REC-html40'>" +
-                    "<head><meta charset='utf-8'><title>成绩单</title></head><body>";
-                const footer = "</body></html>";
-                const sourceHTML = header + content + footer;
-
-                downloadFile(sourceHTML, `${exportData.student.name}_成绩单.doc`, 'application/msword');
-                showSuccess('DOC 文件导出成功！');
-            });
-
-            ui.exportMenu.clearAllData.addEventListener('click', async (e) => {
+            ui.userMenu.clearAllData.addEventListener('click', async (e) => {
                 e.preventDefault();
                 if (!currentUser) return;
                 showConfirmModal(
