@@ -3,13 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>多用户成绩与GPA计算器 (云同步增强版)</title>
+    <title>利兹大学学位等级计算器</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <!-- FullCalendar JS -->
-    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
-
     <style>
         body {
             font-family: 'Inter', 'Helvetica Neue', 'Arial', 'sans-serif';
@@ -19,11 +16,6 @@
             background-color: white;
             border-radius: 0.75rem;
             box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-            transition: all 0.2s ease-in-out;
-        }
-        .card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
         }
         .form-input {
             border: 1px solid #d1d5db;
@@ -38,7 +30,7 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            padding: 0.625rem 1.25rem;
+            padding: 0.5rem 1rem;
             border-radius: 0.5rem;
             font-weight: 600;
             transition: all 0.2s ease-in-out;
@@ -49,1302 +41,297 @@
         .btn-primary:hover { background-color: #1d4ed8; }
         .btn-secondary { background-color: #e5e7eb; color: #374151; }
         .btn-secondary:hover { background-color: #d1d5db; }
-        .btn-success { background-color: #10b981; color: white; }
-        .btn-success:hover { background-color: #059669; }
         .btn-danger { background-color: #ef4444; color: white; }
         .btn-danger:hover { background-color: #dc2626; }
-        .btn-danger-outline { background-color: transparent; color: #ef4444; border-color: #ef4444; }
-        .btn-danger-outline:hover { background-color: #fef2f2; color: #dc2626; }
-        .fade-in { animation: fadeIn 0.5s ease-in-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        #gpa-info-popup, #loading-overlay, #confirm-modal { display: none; }
-        [v-cloak] { display: none; }
-        .error-message {
-            background-color: #fef2f2;
-            border: 1px solid #fecaca;
-            color: #dc2626;
-            padding: 1rem;
-            border-radius: 0.5rem;
-            margin-bottom: 1rem;
-        }
-        .score-excellent { color: #10b981; }
-        .score-good { color: #3b82f6; }
-        .score-average { color: #f59e0b; }
-        .score-poor { color: #ef4444; }
-
-        /* Sidebar Styles */
-        #sidebar {
-            transition: transform 0.3s ease-in-out;
-        }
-        #main-content {
-            transition: margin-left 0.3s ease-in-out;
-        }
-        /* FullCalendar Customizations */
-        .fc-event {
-            cursor: pointer;
-        }
-        .fc-daygrid-event-dot {
-            border-color: var(--fc-event-border-color, #fff) !important;
-        }
+        .score-1st { color: #10b981; } /* Green */
+        .score-2-1 { color: #3b82f6; } /* Blue */
+        .score-2-2 { color: #f59e0b; } /* Amber */
+        .score-3rd { color: #ef4444; } /* Red */
+        .score-fail { color: #7f1d1d; } /* Dark Red */
     </style>
 </head>
 <body class="p-4 md:p-8">
-    <div id="loading-overlay" class="fixed inset-0 bg-white bg-opacity-80 flex items-center justify-center z-50">
-        <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500"></div>
-    </div>
-    <div id="error-container" class="fixed top-5 right-5 z-50 w-full max-w-sm"></div>
+    <div class="max-w-5xl mx-auto">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-extrabold text-gray-800">利兹大学 (University of Leeds)</h1>
+            <p class="text-lg text-gray-600 mt-2">学士学位等级计算器 (Bachelor Degree Classification)</p>
+        </header>
 
-    <!-- Sidebar -->
-    <div id="sidebar" class="fixed top-0 left-0 h-full w-64 bg-white shadow-lg p-4 z-40 transform -translate-x-full md:translate-x-0">
-        <h2 class="text-2xl font-bold text-gray-800 mb-6">学生列表</h2>
-        <ul id="sidebar-student-list" class="space-y-2">
-            <!-- Student list will be populated here -->
-        </ul>
-    </div>
+        <!-- Import/Export Buttons -->
+        <div class="card p-4 mb-8 flex justify-center items-center space-x-4">
+            <input type="file" id="import-input" class="hidden" accept=".xlsx, .xls, .csv">
+            <button id="download-template-btn" class="btn btn-secondary">下载模板</button>
+            <button id="import-btn" class="btn btn-primary">导入成绩</button>
+        </div>
 
-    <!-- Main Content -->
-    <div id="main-content" class="md:ml-64">
-        <div id="login-view" class="max-w-md mx-auto text-center mt-20 fade-in">
-            <h1 class="text-4xl md:text-5xl font-extrabold text-gray-800">GRADESC</h1>
-            <p class="text-gray-500 mt-3 text-lg mb-8">您的私人成绩与GPA智能管家</p>
-            <div class="card p-8">
-                <h2 class="text-xl font-bold text-gray-700 mb-2">欢迎使用</h2>
-                <p class="text-gray-500 mb-6">请登录以在云端安全地同步您的所有数据。</p>
-                <button id="login-btn" class="btn btn-primary w-full">
-                    <svg class="w-5 h-5 mr-3" xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
-                        <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"></path>
-                        <path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"></path>
-                        <path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.222,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"></path>
-                        <path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.574l6.19,5.238C42.022,35.28,44,30.036,44,24C44,22.659,43.862,21.35,43.611,20.083z"></path>
-                    </svg>
-                    使用 Google 登录
-                </button>
-                <div id="status-message" class="mt-4 text-sm text-gray-600"></div>
+        <!-- 学年模块输入区域：改为垂直堆叠 -->
+        <div class="grid grid-cols-1 gap-8"> <!-- 修改点1：移除了 lg:grid-cols-2，只保留 grid-cols-1 -->
+
+            <!-- 倒数第二学年 -->
+            <div class="card p-6 mb-8"> <!-- 修改点2：添加 mb-8 以增加与下一个卡片的间距 -->
+                <h2 class="text-2xl font-bold text-gray-700 mb-4">倒数第二学年 (Penultimate Year)</h2>
+                <table class="w-full text-left">
+                    <thead>
+                        <tr class="border-b-2">
+                            <th class="p-2 w-2/5">模块名称</th>
+                            <th class="p-2">分数</th>
+                            <th class="p-2">学分</th>
+                            <th class="p-2"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="penultimate-year-modules">
+                        <!-- Module rows will be inserted here -->
+                    </tbody>
+                </table>
+                <button id="add-penultimate-module" class="btn btn-primary mt-4 w-full">添加模块</button>
+            </div>
+
+            <!-- 最后一学年 -->
+            <div class="card p-6 mb-8"> <!-- 修改点3：同样添加 mb-8 -->
+                <h2 class="text-2xl font-bold text-gray-700 mb-4">最后一学年 (Final Year)</h2>
+                <table class="w-full text-left">
+                    <thead>
+                        <tr class="border-b-2">
+                            <th class="p-2 w-2/5">模块名称</th>
+                            <th class="p-2">分数</th>
+                            <th class="p-2">学分</th>
+                            <th class="p-2 text-sm">技能发现?</th>
+                            <th class="p-2"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="final-year-modules">
+                        <!-- Module rows will be inserted here -->
+                    </tbody>
+                </table>
+                <button id="add-final-module" class="btn btn-primary mt-4 w-full">添加模块</button>
+            </div>
+
+        </div>
+
+        <!-- 结果和说明部分保持不变 -->
+        <div class="card p-8 mt-8">
+            <h2 class="text-3xl font-bold text-gray-800 mb-6 text-center">计算结果</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-600">倒数第二学年平均分</h3>
+                    <p id="penultimate-average" class="text-4xl font-extrabold text-gray-700 mt-2">0.00</p>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-600">最后一学年平均分</h3>
+                    <p id="final-average" class="text-4xl font-extrabold text-gray-700 mt-2">0.00</p>
+                </div>
+                <div class="md:col-span-3 border-t pt-6 mt-6 md:border-t-0 md:pt-0 md:mt-0 md:border-l md:pl-6">
+                    <h3 class="text-xl font-bold text-gray-600">最终学位加权平均分</h3>
+                    <p class="text-gray-500 text-sm">(Y2 Avg * 1 + Y3 Avg * 2) / 3</p>
+                    <p id="final-classification-score" class="text-6xl font-extrabold text-blue-600 my-3">0.00</p>
+                    <p id="final-classification-grade" class="text-3xl font-bold">-</p>
+                </div>
             </div>
         </div>
-        <div id="app-view" class="max-w-7xl mx-auto" v-cloak>
-            <header class="flex justify-between items-center mb-6">
-                <div class="flex items-center">
-                    <button id="sidebar-toggle" class="md:hidden mr-4 p-2 rounded-md hover:bg-gray-200">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-                        </svg>
-                    </button>
-                    <h1 class="text-3xl md:text-4xl font-extrabold text-gray-800">分数计算与统计</h1>
-                </div>
-                
-                <!-- Unified User Menu -->
-                <div class="relative inline-block text-left">
-                    <button type="button" id="user-menu-btn" class="inline-flex items-center gap-x-2 rounded-full p-1 pr-3 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
-                        <img id="user-avatar" class="w-8 h-8 rounded-full bg-gray-200" src="" alt="User Avatar">
-                        <span id="user-name" class="hidden md:block"></span>
-                        <svg class="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                            <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
-                        </svg>
-                    </button>
-                    
-                    <div id="user-menu-options" class="absolute right-0 z-10 mt-2 w-64 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none hidden" role="menu" aria-orientation="vertical">
-                        <!-- Data Management Section -->
-                        <div class="px-4 py-2 text-xs text-gray-500">数据管理</div>
-                        <a href="#" id="import-btn" class="flex items-center gap-x-3 text-gray-700 px-4 py-2 text-sm hover:bg-gray-100" role="menuitem">
-                           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd" /></svg>
-                           <span>导入成绩</span>
-                        </a>
-                        <a href="#" id="download-template-btn" class="flex items-center gap-x-3 text-gray-700 px-4 py-2 text-sm hover:bg-gray-100" role="menuitem">
-                           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
-                           <span>下载模板</span>
-                        </a>
-                        <a href="#" id="export-xlsx" class="flex items-center gap-x-3 text-gray-700 px-4 py-2 text-sm hover:bg-gray-100" role="menuitem">
-                           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor"><path d="M2 6a2 2 0 012-2h12a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM6 12a2 2 0 100-4 2 2 0 000 4z" /></svg>
-                           <span>导出为 Excel (.xlsx)</span>
-                        </a>
-                        <a href="#" id="export-txt" class="flex items-center gap-x-3 text-gray-700 px-4 py-2 text-sm hover:bg-gray-100" role="menuitem">
-                           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a1 1 0 110 2h-3a1 1 0 01-1-1v-2a1 1 0 00-1-1H9a1 1 0 00-1 1v2a1 1 0 01-1 1H4a1 1 0 110-2V4zm2 4a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h4a1 1 0 100-2H7z" clip-rule="evenodd" /></svg>
-                           <span>导出为 Text (.txt)</span>
-                        </a>
-                        <!-- GPA Tools Section -->
-                        <div class="border-t border-gray-200 my-1"></div>
-                        <div class="px-4 py-2 text-xs text-gray-500">大学GPA工具</div>
-                        <a href="./leeds-gpa.html" target="_blank" class="flex items-center gap-x-3 text-gray-700 px-4 py-2 text-sm hover:bg-gray-100" role="menuitem">
-                           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor"><path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L9 9.61V16a1 1 0 001 1h2a1 1 0 001-1v-6.39l6.394-2.69a1 1 0 000-1.84l-7-3zM10 8L3 5.39 10 3l7 2.39L10 8z" /></svg>
-                           <span>利兹大学 (UoL)</span>
-                        </a>
-                        <!-- Account Section -->
-                        <div class="border-t border-gray-200 my-1"></div>
-                        <a href="#" id="help-btn" class="flex items-center gap-x-3 text-gray-700 px-4 py-2 text-sm hover:bg-gray-100" role="menuitem">
-                           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" /></svg>
-                           <span>帮助</span>
-                        </a>
-                        <a href="#" id="clear-all-data" class="flex items-center gap-x-3 text-red-600 px-4 py-2 text-sm hover:bg-red-50" role="menuitem">
-                           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.22 3.009-1.742 3.009H4.42c-1.522 0-2.492-1.675-1.742-3.009l5.58-9.92zM10 13a1 1 0 110-2 1 1 0 010 2zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
-                           <span>清空所有数据</span>
-                        </a>
-                        <a href="#" id="logout-btn" class="flex items-center gap-x-3 text-gray-700 px-4 py-2 text-sm hover:bg-gray-100" role="menuitem">
-                           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V5.414l7.293 7.293a1 1 0 001.414-1.414L5.414 4H15a1 1 0 100-2H4a1 1 0 00-1 1z" clip-rule="evenodd" /></svg>
-                           <span>登出</span>
-                        </a>
-                    </div>
-                </div>
-                <input type="file" id="import-file-input" class="hidden" accept=".xlsx, .xls">
-            </header>
-            <div id="add-student-card" class="card p-6 mb-8 fade-in">
-                <div class="grid md:grid-cols-2 gap-6 items-end">
-                    <div class="md:col-span-1">
-                        <label for="new-student-name" class="block text-sm font-medium text-gray-600 mb-2">添加新学生</label>
-                        <div class="flex">
-                            <input type="text" id="new-student-name" placeholder="输入学生姓名..." class="form-input w-full p-2 rounded-l-md">
-                            <button id="add-student-btn" class="btn btn-primary rounded-l-none px-4">+</button>
-                        </div>
-                    </div>
-                    <div class="md:col-span-1">
-                       <button id="remove-student-btn" class="btn btn-danger-outline w-full">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                                <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
-                            </svg>
-                            删除当前学生
-                        </button>
-                    </div>
-                </div>
-            </div>
 
-            <!-- Calendar View -->
-            <div id="calendar-card" class="card p-6 mb-10 fade-in">
-                 <h2 class="text-xl font-bold text-gray-800 mb-4">截止日期日历</h2>
-                 <div id='calendar'></div>
-            </div>
-
-            <div id="overall-summary-card" class="card p-6 mb-10 fade-in">
-                <h2 class="text-xl font-bold text-gray-800 mb-4">学业总览: <span id="current-student-name-summary" class="text-blue-600"></span></h2>
-                <div class="grid grid-cols-1 gap-8">
-                    <div class="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
-                        <div class="font-semibold text-gray-600">平均学期总分</div>
-                        <span id="overall-weighted-score-display" class="text-4xl font-extrabold text-blue-600">N/A</span>
-                    </div>
-                </div>
-            </div>
-            <div id="student-content-container"></div>
-            <div class="mt-10 text-center">
-                <button id="add-semester-btn" class="btn btn-primary">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" /></svg>
-                    添加新学期
-                </button>
-            </div>
-        </div>
-    </div>
-    <div id="gpa-info-popup" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50">
-        <div class="card p-8 max-w-md w-full fade-in">
-            <h3 class="text-2xl font-bold mb-4 text-gray-800">GPA换算规则</h3>
-            <p class="mb-6 text-gray-600">本计算器采用常见的4.0制标准。GPA根据课程权重进行加权计算。</p>
-            <ul class="space-y-2 text-gray-700">
-                <li class="flex justify-between"><span>90-100分</span><span class="font-semibold text-blue-600">4.0 绩点</span></li>
-                <li class="flex justify-between"><span>85-89分</span><span class="font-semibold text-blue-600">3.7 绩点</span></li>
-                <li class="flex justify-between"><span>82-84分</span><span class="font-semibold text-blue-600">3.3 绩点</span></li>
-                <li class="flex justify-between"><span>78-81分</span><span class="font-semibold text-blue-600">3.0 绩点</span></li>
-                <li class="flex justify-between"><span>75-77分</span><span class="font-semibold text-blue-600">2.7 绩点</span></li>
-                <li class="flex justify-between"><span>72-74分</span><span class="font-semibold text-blue-600">2.3 绩点</span></li>
-                <li class="flex justify-between"><span>68-71分</span><span class="font-semibold text-blue-600">2.0 绩点</span></li>
-                <li class="flex justify-between"><span>65-67分</span><span class="font-semibold text-blue-600">1.7 绩点</span></li>
-                <li class="flex justify-between"><span>60-64分</span><span class="font-semibold text-blue-600">1.0 绩点</span></li>
-                <li class="flex justify-between"><span>60分以下</span><span class="font-semibold text-red-600">0.0 绩点</span></li>
+        <div class="card p-6 mt-8 text-gray-700 text-sm">
+            <h3 class="text-lg font-bold mb-3">计算规则说明</h3>
+            <ul class="list-disc list-inside space-y-2">
+                <li>学位等级根据倒数第二学年 (Penultimate Year) 和最后一学年 (Final Year) 的加权平均分计算。</li>
+                <li>最终加权分 = (倒数第二学年平均分 × 1 + 最后一学年平均分 × 2) / 3。</li>
+                <li>学年平均分 = (所有模块的[分数 × 学分]之和) / (该学年总学分)。</li>
+                <li><strong>技能发现模块 (Skills Discovery Modules):</strong> 如果在最后一学年修读了此类模块，其分数和学分将被计入倒数第二学年用于计算。</li>
+                <li class="mt-4"><strong>学位等级划分:</strong>
+                    <ul class="list-inside list-disc ml-4 mt-1">
+                        <li><span class="font-bold score-1st">70+</span>: First Class Honours (1st)</li>
+                        <li><span class="font-bold score-2-1">60-69</span>: Upper Second Class Honours (2:1)</li>
+                        <li><span class="font-bold score-2-2">50-59</span>: Lower Second Class Honours (2:2)</li>
+                        <li><span class="font-bold score-3rd">40-49</span>: Third Class Honours (3rd)</li>
+                        <li><span class="font-bold score-fail"><40</span>: Fail</li>
+                    </ul>
+                </li>
+                <li>本计算器仅供参考，最终结果以学校官方发布为准。</li>
             </ul>
-            <button onclick="document.getElementById('gpa-info-popup').style.display='none'" class="btn btn-primary w-full mt-8">我明白了</button>
         </div>
     </div>
-    <div id="confirm-modal" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50">
-        <div class="card p-8 max-w-md w-full fade-in">
-            <h3 id="confirm-modal-title" class="text-xl font-bold mb-4 text-gray-800">确认操作</h3>
-            <p id="confirm-modal-body" class="mb-8 text-gray-600">您确定要继续吗？此操作无法撤销。</p>
-            <div class="flex justify-end space-x-4">
-                <button id="confirm-modal-cancel-btn" class="btn btn-secondary">取消</button>
-                <button id="confirm-modal-confirm-btn" class="btn btn-danger">确认删除</button>
-            </div>
-        </div>
-    </div>
-    <template id="student-content-template">
-        <div class="space-y-12"></div>
-    </template>
-    <div class="hidden">
-        <template id="semester-template">
-            <div class="semester-section card p-6">
-                <div class="flex flex-col md:flex-row justify-between md:items-center mb-6">
-                    <input type="text" class="semester-name-input text-3xl font-bold text-gray-700 border-l-4 border-blue-500 pl-4 mb-4 md:mb-0 bg-transparent focus:border-blue-400 outline-none w-full md:w-auto" value="学期名称">
-                    <div class="flex items-center space-x-2">
-                        <button class="add-course-btn btn btn-primary">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                                <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
-                            </svg>
-                            添加课程
-                        </button>
-                        <button class="remove-semester-btn btn btn-danger-outline">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
-                        </button>
-                    </div>
-                </div>
-                <div class="courses-container grid grid-cols-1 gap-8"></div>
-                <div class="mt-8 p-6 bg-gray-50 rounded-lg">
-                    <!-- REFINED SUMMARY SECTION -->
-                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-                        <h3 class="text-xl font-bold text-gray-800">学期总结</h3>
-                        <!-- NEW UI for Calculation Mode -->
-                        <div class="p-1 bg-gray-200 rounded-lg flex items-center w-full sm:w-auto text-sm">
-                            <button data-mode="weighted" class="mode-btn flex-1 sm:flex-none py-1.5 px-4 rounded-md font-semibold transition-all duration-200">加权模式</button>
-                            <button data-mode="average" class="mode-btn flex-1 sm:flex-none py-1.5 px-4 rounded-md font-semibold transition-all duration-200">均分模式</button>
-                        </div>
-                    </div>
-                    <div class="space-y-4">
-                        <div class="flex justify-between items-center">
-                            <div class="font-semibold text-gray-600 semester-score-label">学期总分</div>
-                            <span class="semester-weighted-score-display text-3xl font-extrabold text-blue-600">N/A</span>
-                        </div>
-                        <div class="flex justify-between items-center border-t pt-4 border-gray-200">
-                            <div class="font-semibold text-gray-600">学期均分</div>
-                            <span class="semester-average-score-display text-3xl font-extrabold text-indigo-600">N/A</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </template>
-        <template id="course-template">
-            <div class="card p-6 course-card fade-in">
-                <div class="flex justify-between items-start mb-5">
-                    <input type="text" class="course-name-input text-2xl font-bold text-gray-800 bg-transparent border-b-2 border-transparent focus:border-blue-500 outline-none w-2/3 p-0" placeholder="输入课程名称...">
-                    <button class="remove-course-btn text-gray-400 hover:text-red-500 transition">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                    </button>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                    <div class="course-weight-container">
-                        <label class="text-sm font-medium text-gray-500">学期总分权重(%)</label>
-                        <input type="number" min="0" step="0.5" placeholder="20" class="course-weight-input form-input w-full p-2 mt-1 rounded-md">
-                    </div>
-                    <div>
-                        <label class="text-sm font-medium text-gray-500">权重和</label>
-                        <span class="total-weight-display font-bold text-lg p-2 block mt-1">0%</span>
-                    </div>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left">
-                        <thead class="border-b-2 border-gray-200">
-                            <tr>
-                                <th class="p-3 text-sm font-semibold text-gray-500">评分项目</th>
-                                <th class="p-3 text-sm font-semibold text-gray-500">类型</th>
-                                <th class="p-3 text-sm font-semibold text-gray-500">权重(%)</th>
-                                <th class="p-3 text-sm font-semibold text-gray-500">得分</th>
-                                <th class="p-3 text-sm font-semibold text-gray-500">满分</th>
-                                <th class="p-3 text-sm font-semibold text-gray-500">截止日期与时间</th>
-                                <th class="p-3 text-sm font-semibold text-gray-500 text-center"></th>
-                            </tr>
-                        </thead>
-                        <tbody class="assignments-container"></tbody>
-                    </table>
-                </div>
-                <button class="add-assignment-btn mt-4 w-full btn btn-secondary">+ 添加作业/考试</button>
-                <div class="mt-6 p-4 bg-gray-50 rounded-lg space-y-3">
-                    <div class="flex justify-between items-center">
-                        <h3 class="text-md font-semibold text-gray-600">当前课程总分:</h3>
-                        <p class="current-grade-display text-2xl font-bold text-blue-600">N/A</p>
-                    </div>
-                </div>
-            </div>
-        </template>
-        <template id="assignment-template">
-            <tr class="assignment-row border-b border-gray-100 last:border-b-0">
-                <td class="p-2">
-                    <input type="text" placeholder="例如: 期中论文" class="assignment-name-input w-full bg-transparent outline-none p-1">
-                </td>
-                <td class="p-2">
-                    <select class="assignment-type-input w-full bg-transparent outline-none p-1">
-                        <option value="">请选择</option>
-                        <option value="作业">作业</option>
-                        <option value="小测验">小测验</option>
-                        <option value="期中考试">期中考试</option>
-                        <option value="期末考试">期末考试</option>
-                        <option value="项目">项目</option>
-                        <option value="出勤">出勤</option>
-                        <option value="其他">其他</option>
-                    </select>
-                </td>
-                <td class="p-2">
-                    <input type="number" min="0" placeholder="20" class="assignment-weight-input w-20 bg-transparent outline-none p-1 text-center">
-                </td>
-                <td class="p-2">
-                    <input type="number" min="0" placeholder="-" class="assignment-score-input w-24 bg-transparent outline-none p-1 text-center">
-                </td>
-                <td class="p-2">
-                    <input type="number" min="0" value="100" class="assignment-max-score-input w-24 bg-transparent outline-none p-1 text-center">
-                </td>
-                <td class="p-2">
-                    <input type="datetime-local" class="assignment-deadline-input w-full bg-transparent outline-none p-1">
-                </td>
-                <td class="p-2 text-center">
-                    <button class="remove-assignment-btn text-gray-400 hover:text-red-500 transition">×</button>
-                </td>
-            </tr>
-        </template>
-    </div>
-    <script type="module">
-        // Error Handling and Status Updates
-        function showError(message, details = null) {
-            const errorContainer = document.getElementById('error-container');
-            const errorId = `err-${Date.now()}`;
-            const errorDiv = document.createElement('div');
-            errorDiv.id = errorId;
-            errorDiv.className = 'error-message mb-2 fade-in';
-            errorDiv.innerHTML = `
-                <div class="flex justify-between items-center">
-                    <span><strong>错误:</strong> ${message}</span>
-                    <button onclick="document.getElementById('${errorId}').remove()" class="text-lg font-bold">&times;</button>
-                </div>
-                ${details ? `<div class="mt-2 text-sm">${details}</div>` : ''}
-            `;
-            errorContainer.appendChild(errorDiv);
-            setTimeout(() => { errorDiv.remove(); }, 6000);
-        }
-        function showSuccess(message) {
-            const errorContainer = document.getElementById('error-container');
-            const successId = `success-${Date.now()}`;
-            const successDiv = document.createElement('div');
-            successDiv.id = successId;
-            successDiv.className = 'fade-in p-4 mb-2 rounded-lg bg-green-50 border border-green-200 text-green-800';
-            successDiv.innerHTML = `
-                <div class="flex justify-between items-center">
-                    <span><strong>成功:</strong> ${message}</span>
-                    <button onclick="document.getElementById('${successId}').remove()" class="text-lg font-bold text-green-600">&times;</button>
-                </div>
-            `;
-            errorContainer.appendChild(successDiv);
-            setTimeout(() => { successDiv.remove(); }, 3000);
-        }
-        function updateStatus(message) {
-            document.getElementById('status-message').textContent = message;
-        }
 
-        // Firebase Initialization
-        updateStatus('正在初始化 Firebase...');
-        try {
-            const { initializeApp } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js");
-            const { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js");
-            const { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, query, orderBy, getDocs, writeBatch } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
-            
-            const firebaseConfig = {
-                apiKey: "AIzaSyBgYSM_HCYqUSvIN5VifHbX-j9p6IjhVJs",
-                authDomain: "sample-firebase-ai-app-87f8f.firebaseapp.com",
-                projectId: "sample-firebase-ai-app-87f8f",
-                storageBucket: "sample-firebase-ai-app-87f8f.firebasestorage.app",
-                messagingSenderId: "887928734431",
-                appId: "1:887928734431:web:348a48ea1cde4a932cdf6a"
-            };
-            
-            const app = initializeApp(firebaseConfig);
-            const auth = getAuth(app);
-            const db = getFirestore(app);
-            const provider = new GoogleAuthProvider();
-            provider.setCustomParameters({ prompt: 'select_account' });
-            updateStatus('Firebase 初始化成功！');
+    <script>
+        // ... 脚本部分完全保持不变 ...
+        document.addEventListener('DOMContentLoaded', () => {
+            const penultimateBody = document.getElementById('penultimate-year-modules');
+            const finalBody = document.getElementById('final-year-modules');
+            const importInput = document.getElementById('import-input');
+            document.getElementById('add-penultimate-module').addEventListener('click', () => addModuleRow(penultimateBody, false));
+            document.getElementById('add-final-module').addEventListener('click', () => addModuleRow(finalBody, true));
+            document.getElementById('import-btn').addEventListener('click', () => importInput.click());
+            document.getElementById('download-template-btn').addEventListener('click', downloadTemplate);
+            importInput.addEventListener('change', handleImport);
 
-            // State Variables
-            let currentUser = null;
-            let studentsUnsubscribe = null;
-            let localStudentsData = [];
-            let selectedStudentId = null;
-            let calendar = null;
-
-            // UI Elements
-            const ui = {
-                loginView: document.getElementById('login-view'),
-                appView: document.getElementById('app-view'),
-                loadingOverlay: document.getElementById('loading-overlay'),
-                userName: document.getElementById('user-name'),
-                userAvatar: document.getElementById('user-avatar'),
-                studentContentContainer: document.getElementById('student-content-container'),
-                importBtn: document.getElementById('import-btn'),
-                importFileInput: document.getElementById('import-file-input'),
-                downloadTemplateBtn: document.getElementById('download-template-btn'),
-                sidebar: document.getElementById('sidebar'),
-                mainContent: document.getElementById('main-content'),
-                sidebarToggle: document.getElementById('sidebar-toggle'),
-                sidebarStudentList: document.getElementById('sidebar-student-list'),
-                currentStudentNameSummary: document.getElementById('current-student-name-summary'),
-                helpBtn: document.getElementById('help-btn'),
-                confirmModal: {
-                    el: document.getElementById('confirm-modal'),
-                    title: document.getElementById('confirm-modal-title'),
-                    body: document.getElementById('confirm-modal-body'),
-                    confirmBtn: document.getElementById('confirm-modal-confirm-btn'),
-                    cancelBtn: document.getElementById('confirm-modal-cancel-btn'),
-                },
-                overall: {
-                    score: document.getElementById('overall-weighted-score-display'),
-                },
-                userMenu: {
-                    btn: document.getElementById('user-menu-btn'),
-                    options: document.getElementById('user-menu-options'),
-                    exportTxt: document.getElementById('export-txt'),
-                    exportXlsx: document.getElementById('export-xlsx'),
-                    clearAllData: document.getElementById('clear-all-data'),
-                    logoutBtn: document.getElementById('logout-btn'),
-                }
-            };
-
-            // Sidebar Toggle Logic
-            ui.sidebarToggle.addEventListener('click', () => {
-                ui.sidebar.classList.toggle('-translate-x-full');
-            });
-
-            // Calendar Initialization
-            function initializeCalendar() {
-                const calendarEl = document.getElementById('calendar');
-                if (calendar) {
-                    calendar.destroy();
-                }
-                calendar = new FullCalendar.Calendar(calendarEl, {
-                    initialView: 'dayGridMonth',
-                    headerToolbar: {
-                        left: 'prev,next today',
-                        center: 'title',
-                        right: 'dayGridMonth,timeGridWeek,listWeek'
-                    },
-                    events: [],
-                    locale: 'zh-cn',
-                    eventDidMount: function(info) {
-                        info.el.title = `${info.event.extendedProps.studentName}\n${info.event.title}`;
-                    }
-                });
-                calendar.render();
-            }
-
-            // Confirmation Modal Logic
-            let confirmCallback = null;
-            const showConfirmModal = (title, body, onConfirm) => {
-                ui.confirmModal.title.textContent = title;
-                ui.confirmModal.body.textContent = body;
-                confirmCallback = onConfirm;
-                ui.confirmModal.el.style.display = 'flex';
-            };
-            const hideConfirmModal = () => {
-                ui.confirmModal.el.style.display = 'none';
-                confirmCallback = null;
-            };
-            ui.confirmModal.confirmBtn.addEventListener('click', () => {
-                if (typeof confirmCallback === 'function') {
-                    confirmCallback();
-                }
-                hideConfirmModal();
-            });
-            ui.confirmModal.cancelBtn.addEventListener('click', hideConfirmModal);
-
-            // Authentication
-            onAuthStateChanged(auth, (user) => {
-                ui.loadingOverlay.style.display = 'flex';
-                if (user) {
-                    currentUser = user;
-                    ui.loginView.style.display = 'none';
-                    ui.appView.style.display = 'block';
-                    ui.mainContent.classList.remove('md:ml-0');
-                    ui.mainContent.classList.add('md:ml-64');
-                    ui.sidebar.classList.remove('hidden');
-                    ui.userName.textContent = user.displayName;
-                    ui.userAvatar.src = user.photoURL;
-                    initializeCalendar();
-                    setupStudentListener();
+            function createModuleRow(isFinalYear, data = {}) {
+                const tr = document.createElement('tr');
+                tr.className = 'module-row';
+                let innerHTML = `
+                    <td class="p-2"><input type="text" class="module-name-input form-input w-full p-2 rounded-md" placeholder="模块名称" value="${data.name || ''}"></td>
+                    <td class="p-2"><input type="number" min="0" max="100" class="mark-input form-input w-full p-2 rounded-md" placeholder="分数" value="${data.mark || ''}"></td>
+                    <td class="p-2"><input type="number" min="0" class="credit-input form-input w-full p-2 rounded-md" placeholder="学分" value="${data.credits || ''}"></td>
+                `;
+                if (isFinalYear) {
+                    innerHTML += `
+                        <td class="p-2 text-center"><input type="checkbox" class="discovery-checkbox h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" ${data.isDiscovery ? 'checked' : ''}></td>
+                    `;
                 } else {
-                    currentUser = null;
-                    if (studentsUnsubscribe) studentsUnsubscribe();
-                    ui.appView.style.display = 'none';
-                    ui.loginView.style.display = 'block';
-                    ui.mainContent.classList.add('md:ml-0');
-                    ui.mainContent.classList.remove('md:ml-64');
-                    ui.sidebar.classList.add('hidden');
-                    ui.loadingOverlay.style.display = 'none';
-                    updateStatus('请点击按钮登录');
+                     innerHTML += '<td class="p-2"></td>';
                 }
-            });
+                innerHTML += `
+                    <td class="p-2 text-right"><button class="remove-row-btn btn btn-danger p-2">×</button></td>
+                `;
+                tr.innerHTML = innerHTML;
+                return tr;
+            }
 
-            // Login/Logout
-            document.getElementById('login-btn').addEventListener('click', () => signInWithPopup(auth, provider).catch(err => showError('登录失败', err.message)));
-            ui.userMenu.logoutBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                signOut(auth).catch(err => showError('登出失败', err.message))
-            });
-
-            // Firestore Listener
-            function setupStudentListener() {
-                if (!currentUser) return;
-                const studentsColRef = collection(db, 'users', currentUser.uid, 'students');
-                const q = query(studentsColRef, orderBy("name"));
-                if (studentsUnsubscribe) studentsUnsubscribe();
-                studentsUnsubscribe = onSnapshot(q, (snapshot) => {
-                    const hadData = localStudentsData.length > 0;
-                    localStudentsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    
-                    if (!hadData && localStudentsData.length > 0) {
-                        selectedStudentId = localStudentsData[0].id;
-                    } else if (localStudentsData.length === 0) {
-                        selectedStudentId = null;
-                    } else if (selectedStudentId && !localStudentsData.some(s => s.id === selectedStudentId)) {
-                        selectedStudentId = localStudentsData.length > 0 ? localStudentsData[0].id : null;
+            function addModuleRow(tbody, isFinalYear, data) {
+                const row = createModuleRow(isFinalYear, data);
+                tbody.appendChild(row);
+                attachRowListeners(row);
+                if (!data && tbody.children.length === 1) {
+                    for(let i=0; i<3; i++) {
+                         const extraRow = createModuleRow(isFinalYear);
+                         tbody.appendChild(extraRow);
+                         attachRowListeners(extraRow);
                     }
+                }
+            }
 
-                    renderSidebarStudentList();
-                    renderStudentContent();
-                    updateCalendarEvents();
-                    ui.loadingOverlay.style.display = 'none';
-                }, (error) => {
-                    showError('数据加载失败', error.message);
-                    ui.loadingOverlay.style.display = 'none';
+            function attachRowListeners(row) {
+                row.querySelector('.remove-row-btn').addEventListener('click', () => {
+                    row.remove();
+                    calculateAll();
+                });
+                row.querySelectorAll('input').forEach(input => {
+                    input.addEventListener('input', calculateAll);
                 });
             }
 
-            // Render Logic
-            function renderSidebarStudentList() {
-                ui.sidebarStudentList.innerHTML = '';
-                if (localStudentsData.length === 0) {
-                    ui.sidebarStudentList.innerHTML = '<li class="text-gray-500">没有学生数据。</li>';
-                    return;
-                }
-                localStudentsData.forEach(student => {
-                    const li = document.createElement('li');
-                    li.innerHTML = `<a href="#" data-id="${student.id}" class="student-link block p-2 rounded-md hover:bg-gray-100 ${student.id === selectedStudentId ? 'bg-blue-100 text-blue-700 font-semibold' : ''}">${student.name}</a>`;
-                    ui.sidebarStudentList.appendChild(li);
+            function calculateYearAverage(moduleRows) {
+                let totalWeightedScore = 0;
+                let totalCredits = 0;
+                moduleRows.forEach(row => {
+                    const mark = parseFloat(row.querySelector('.mark-input').value) || 0;
+                    const credit = parseFloat(row.querySelector('.credit-input').value) || 0;
+                    if (mark > 0 && credit > 0) {
+                        totalWeightedScore += mark * credit;
+                        totalCredits += credit;
+                    }
                 });
-            }
-            
-            ui.sidebarStudentList.addEventListener('click', (e) => {
-                e.preventDefault();
-                const link = e.target.closest('.student-link');
-                if (link) {
-                    selectedStudentId = link.dataset.id;
-                    renderSidebarStudentList();
-                    renderStudentContent();
-                    if (window.innerWidth < 768) {
-                         ui.sidebar.classList.add('-translate-x-full');
-                    }
-                }
-            });
-
-            function renderStudentContent() {
-                const activeEl = document.activeElement;
-                const activeElPath = getElementPath(activeEl);
-                ui.studentContentContainer.innerHTML = '';
-
-                const student = localStudentsData.find(s => s.id === selectedStudentId);
-                ui.currentStudentNameSummary.textContent = student ? student.name : '未选择学生';
-
-                if (!student) {
-                    updateAllCalculations();
-                    return;
-                };
-                
-                const studentContent = document.getElementById('student-content-template').content.cloneNode(true);
-                const semestersContainer = studentContent.querySelector('.space-y-12');
-                if (Array.isArray(student.semesters)) {
-                    student.semesters.forEach((semesterData, semesterIndex) => {
-                        const semesterEl = createSemesterElement(semesterData, semesterIndex);
-                        semestersContainer.appendChild(semesterEl);
-                    });
-                }
-                ui.studentContentContainer.appendChild(studentContent);
-                updateAllCalculations();
-                
-                if (activeElPath) {
-                    const newActiveEl = findElementByPath(activeElPath);
-                    if (newActiveEl) {
-                        newActiveEl.focus();
-                        if (activeEl.tagName === 'INPUT' && typeof activeEl.selectionStart === 'number') {
-                            newActiveEl.selectionStart = activeEl.selectionStart;
-                            newActiveEl.selectionEnd = activeEl.selectionEnd;
-                        }
-                    }
-                }
+                return totalCredits > 0 ? totalWeightedScore / totalCredits : 0;
             }
 
-            // Focus Management
-            function getElementPath(el) {
-                if (!el || !el.closest || !el.closest('#student-content-container')) return null;
-                const path = [];
-                let current = el;
-                while (current && current.id !== 'student-content-container') {
-                    const parent = current.parentElement;
-                    if (!parent) break;
-                    const index = Array.from(parent.children).indexOf(current);
-                    const part = { 
-                        tag: current.tagName, 
-                        index: index, 
-                        className: current.className,
-                        dataset: { ...current.dataset }
-                    };
-                    path.unshift(part);
-                    current = parent;
-                }
-                return path;
-            }
-
-            function findElementByPath(path) {
-                let current = document.getElementById('student-content-container');
-                for (const part of path) {
-                    if (!current) return null;
-                    const children = Array.from(current.children);
-                    let found = false;
-                    for(let i = 0; i < children.length; i++) {
-                        const child = children[i];
-                        if(child.tagName === part.tag && child.className === part.className && JSON.stringify(child.dataset) === JSON.stringify(part.dataset)){
-                            current = child;
-                            found = true;
-                            break;
-                        }
-                    }
-                    if(!found) { current = children[part.index]; }
-                }
-                return current;
-            }
-
-            // Element Creation
-            function createSemesterElement(semesterData, semesterIndex) {
-                const semesterTemplate = document.getElementById('semester-template').content.cloneNode(true);
-                const semesterEl = semesterTemplate.querySelector('.semester-section');
-                semesterEl.dataset.semesterIndex = semesterIndex;
-
-                // NEW: Set active state for calculation mode buttons
-                const isAverageMode = semesterData.calculationMode === 'average';
-                const weightedBtn = semesterEl.querySelector('button[data-mode="weighted"]');
-                const averageBtn = semesterEl.querySelector('button[data-mode="average"]');
-
-                if (isAverageMode) {
-                    averageBtn.classList.add('bg-white', 'text-blue-600', 'shadow-sm');
-                    weightedBtn.classList.add('text-gray-500', 'hover:bg-gray-300');
-                } else { // 'weighted' mode
-                    weightedBtn.classList.add('bg-white', 'text-blue-600', 'shadow-sm');
-                    averageBtn.classList.add('text-gray-500', 'hover:bg-gray-300');
-                }
-
-                if (!semesterData.name) {
-                    let nextYear = new Date().getFullYear();
-                    let semesterNum = 1;
-                    if (semesterIndex > 0) {
-                        const lastSemesterName = localStudentsData.find(s => s.id === selectedStudentId)?.semesters[semesterIndex - 1]?.name || '';
-                        const yearMatch = lastSemesterName.match(/(\d{4})-(\d{4})/);
-                        const termMatch = lastSemesterName.match(/(第一|第二|1|2)/);
-                        if (yearMatch && termMatch) {
-                            const endYear = parseInt(yearMatch[2]);
-                            const isSecond = termMatch[1].includes('二') || termMatch[1] === '2';
-                            if (isSecond) { nextYear = endYear; semesterNum = 1; } 
-                            else { nextYear = endYear; semesterNum = 2; }
-                        } else { semesterNum = semesterIndex + 1; }
-                    }
-                    const startYear = semesterNum === 1 ? nextYear : nextYear - 1;
-                    const endYear = semesterNum === 1 ? nextYear + 1 : nextYear;
-                    const semesterText = semesterNum === 1 ? "第一学期" : "第二学期";
-                    semesterData.name = `${startYear}-${endYear}学年 ${semesterText}`;
-                }
-                semesterEl.querySelector('.semester-name-input').value = semesterData.name;
-                const coursesContainer = semesterEl.querySelector('.courses-container');
-                if(Array.isArray(semesterData.courses)) {
-                    semesterData.courses.forEach((courseData, courseIndex) => {
-                        const courseEl = createCourseElement(courseData, semesterIndex, courseIndex);
-                        coursesContainer.appendChild(courseEl);
-                    });
-                }
-                
-                const courseWeightContainers = semesterEl.querySelectorAll('.course-weight-container');
-                courseWeightContainers.forEach(c => c.style.display = isAverageMode ? 'none' : 'block');
-
-                return semesterEl;
-            }
-
-            function createCourseElement(courseData, semesterIndex, courseIndex) {
-                const courseTemplate = document.getElementById('course-template').content.cloneNode(true);
-                const courseEl = courseTemplate.querySelector('.course-card');
-                courseEl.dataset.semesterIndex = semesterIndex;
-                courseEl.dataset.courseIndex = courseIndex;
-                courseEl.querySelector('.course-name-input').value = courseData.name;
-                courseEl.querySelector('.course-weight-input').value = courseData.weight;
-                const assignmentsContainer = courseEl.querySelector('.assignments-container');
-                if(Array.isArray(courseData.assignments)) {
-                    courseData.assignments.forEach((assignmentData, assignmentIndex) => {
-                        const assignmentEl = createAssignmentElement(assignmentData, semesterIndex, courseIndex, assignmentIndex);
-                        assignmentsContainer.appendChild(assignmentEl);
-                    });
-                }
-                return courseEl;
-            }
-
-            function createAssignmentElement(assignmentData, semesterIndex, courseIndex, assignmentIndex) {
-                const assignmentTemplate = document.getElementById('assignment-template').content.cloneNode(true);
-                const assignmentEl = assignmentTemplate.querySelector('.assignment-row');
-                assignmentEl.dataset.semesterIndex = semesterIndex;
-                assignmentEl.dataset.courseIndex = courseIndex;
-                assignmentEl.dataset.assignmentIndex = assignmentIndex;
-                assignmentEl.querySelector('.assignment-name-input').value = assignmentData.name;
-                assignmentEl.querySelector('.assignment-type-input').value = assignmentData.type || '';
-                assignmentEl.querySelector('.assignment-weight-input').value = assignmentData.weight;
-                assignmentEl.querySelector('.assignment-score-input').value = assignmentData.score;
-                assignmentEl.querySelector('.assignment-max-score-input').value = assignmentData.maxScore;
-                assignmentEl.querySelector('.assignment-deadline-input').value = assignmentData.deadline || '';
-                return assignmentEl;
-            }
-
-            // Data Manipulation (CRUD)
-            async function updateStudentData(studentDataToUpdate) {
-                 if (!selectedStudentId || !currentUser) return;
-                 const studentDocRef = doc(db, 'users', currentUser.uid, 'students', selectedStudentId);
-                 try {
-                     await updateDoc(studentDocRef, studentDataToUpdate);
-                 } catch (error) {
-                     showError('数据更新失败', error.message);
-                 }
-            }
-
-            document.getElementById('new-student-name').addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') { document.getElementById('add-student-btn').click(); }
-            });
-
-            document.getElementById('add-student-btn').addEventListener('click', async () => {
-                const nameInput = document.getElementById('new-student-name');
-                const name = nameInput.value.trim();
-                if (!name || !currentUser) return;
-                const newStudent = { name: name, semesters: [{ name: '', courses: [], calculationMode: 'weighted' }] };
-                try {
-                    const docRef = await addDoc(collection(db, 'users', currentUser.uid, 'students'), newStudent);
-                    selectedStudentId = docRef.id;
-                    nameInput.value = '';
-                    showSuccess('学生添加成功！');
-                } catch (e) { showError('添加学生失败', e.message); }
-            });
-
-            document.getElementById('remove-student-btn').addEventListener('click', () => {
-                if (!selectedStudentId || !currentUser) { showError('没有选中的学生可删除。'); return; }
-                const studentName = localStudentsData.find(s => s.id === selectedStudentId)?.name;
-                showConfirmModal(
-                    `删除学生: ${studentName}`,
-                    `您确定要删除学生 "${studentName}" 的所有数据吗？此操作无法撤销。`,
-                    async () => {
-                        try {
-                            await deleteDoc(doc(db, 'users', currentUser.uid, 'students', selectedStudentId));
-                            selectedStudentId = null;
-                            showSuccess('学生删除成功！');
-                        } catch (e) { showError('删除学生失败', e.message); }
-                    }
-                );
-            });
-
-            document.getElementById('add-semester-btn').addEventListener('click', () => {
-                if (!selectedStudentId) { showError('请先选择一个学生。'); return; }
-                let studentData = JSON.parse(JSON.stringify(localStudentsData.find(s => s.id === selectedStudentId)));
-                if (!studentData) return;
-                studentData.semesters.push({ name: '', courses: [], calculationMode: 'weighted' });
-                updateStudentData({ semesters: studentData.semesters });
-                showSuccess('新学期已添加！');
-            });
-
-            ui.studentContentContainer.addEventListener('click', (e) => {
-                const target = e.target.closest('button');
-                if (!target) return;
-                let studentData = JSON.parse(JSON.stringify(localStudentsData.find(s => s.id === selectedStudentId)));
-                if (!studentData) return;
-                const semesterSection = target.closest('.semester-section');
-                const courseCard = target.closest('.course-card');
-                
-                if (target.classList.contains('mode-btn')) {
-                    const { semesterIndex } = semesterSection.dataset;
-                    const newMode = target.dataset.mode;
-                    if (studentData.semesters[semesterIndex].calculationMode !== newMode) {
-                        studentData.semesters[semesterIndex].calculationMode = newMode;
-                        updateStudentData({ semesters: studentData.semesters });
-                        // The onSnapshot listener will handle the re-render.
-                    }
-                } else if (target.classList.contains('remove-semester-btn')) {
-                    const { semesterIndex } = semesterSection.dataset;
-                    const semesterName = studentData.semesters[semesterIndex].name;
-                    showConfirmModal(`删除学期: ${semesterName}`, `您确定要删除 "${semesterName}" 吗？`, () => {
-                        studentData.semesters.splice(semesterIndex, 1);
-                        updateStudentData({ semesters: studentData.semesters });
-                        showSuccess('学期删除成功！');
-                    });
-                } else if (target.classList.contains('add-course-btn')) {
-                    const { semesterIndex } = semesterSection.dataset;
-                    studentData.semesters[semesterIndex].courses.push({ name: '', weight: '20', assignments: [{ name: '', type: '', weight: '', score: '', maxScore: 100, deadline: '' }]});
-                    updateStudentData({ semesters: studentData.semesters });
-                    showSuccess('课程已添加！');
-                } else if (target.classList.contains('remove-course-btn')) {
-                    const { semesterIndex, courseIndex } = courseCard.dataset;
-                    studentData.semesters[semesterIndex].courses.splice(courseIndex, 1);
-                    updateStudentData({ semesters: studentData.semesters });
-                    showSuccess('课程删除成功！');
-                } else if (target.classList.contains('add-assignment-btn')) {
-                    const { semesterIndex, courseIndex } = courseCard.dataset;
-                    studentData.semesters[semesterIndex].courses[courseIndex].assignments.push({ name: '', type: '', weight: '', score: '', maxScore: 100, deadline: '' });
-                    updateStudentData({ semesters: studentData.semesters });
-                    showSuccess('评分项目已添加！');
-                } else if (target.classList.contains('remove-assignment-btn')) {
-                    const { semesterIndex, courseIndex, assignmentIndex } = target.closest('.assignment-row').dataset;
-                    studentData.semesters[semesterIndex].courses[courseIndex].assignments.splice(assignmentIndex, 1);
-                    updateStudentData({ semesters: studentData.semesters });
-                    showSuccess('评分项目删除成功！');
-                }
-            });
-
-            function updateLocalDataFromInput(target) {
-                if (!selectedStudentId) return null;
-                let studentData = localStudentsData.find(s => s.id === selectedStudentId);
-                if (!studentData || !target.closest('.semester-section')) return null;
-
-                const semesterSection = target.closest('.semester-section');
-                const courseCard = target.closest('.course-card');
-                const assignmentRow = target.closest('.assignment-row');
-                const { semesterIndex } = semesterSection.dataset;
-
-                if (target.classList.contains('semester-name-input')) {
-                    studentData.semesters[semesterIndex].name = target.value;
-                } else if (courseCard) {
-                    const { courseIndex } = courseCard.dataset;
-                    const courseData = studentData.semesters[semesterIndex].courses[courseIndex];
-                    if (assignmentRow) {
-                        const { assignmentIndex } = assignmentRow.dataset;
-                        const assignmentData = courseData.assignments[assignmentIndex];
-                        if (target.classList.contains('assignment-name-input')) assignmentData.name = target.value;
-                        if (target.classList.contains('assignment-type-input')) assignmentData.type = target.value;
-                        if (target.classList.contains('assignment-weight-input')) assignmentData.weight = target.value;
-                        if (target.classList.contains('assignment-score-input')) assignmentData.score = target.value;
-                        if (target.classList.contains('assignment-max-score-input')) assignmentData.maxScore = target.value;
-                        if (target.classList.contains('assignment-deadline-input')) assignmentData.deadline = target.value;
+            function calculateAll() {
+                const penultimateRows = Array.from(penultimateBody.querySelectorAll('.module-row'));
+                const finalRows = Array.from(finalBody.querySelectorAll('.module-row'));
+                const discoveryModules = [];
+                const standardFinalModules = [];
+                finalRows.forEach(row => {
+                    if (row.querySelector('.discovery-checkbox').checked) {
+                        discoveryModules.push(row);
                     } else {
-                        if (target.classList.contains('course-name-input')) courseData.name = target.value;
-                        if (target.classList.contains('course-weight-input')) courseData.weight = target.value;
+                        standardFinalModules.push(row);
                     }
-                }
-                return studentData;
-            }
-
-            ui.studentContentContainer.addEventListener('input', (e) => {
-                updateLocalDataFromInput(e.target);
-                updateAllCalculations();
-            });
-
-            ui.studentContentContainer.addEventListener('change', (e) => {
-                const studentData = updateLocalDataFromInput(e.target);
-                if (studentData) {
-                    updateStudentData({ semesters: studentData.semesters });
-                }
-            });
-
-
-            // Calculation Logic
-            function updateAllCalculations() {
-                if (!selectedStudentId) {
-                    ui.overall.score.textContent = 'N/A';
+                });
+                const penultimateWithDiscoveryRows = penultimateRows.concat(discoveryModules);
+                const penultimateAvg = calculateYearAverage(penultimateWithDiscoveryRows);
+                const finalAvg = calculateYearAverage(standardFinalModules);
+                document.getElementById('penultimate-average').textContent = penultimateAvg.toFixed(2);
+                document.getElementById('final-average').textContent = finalAvg.toFixed(2);
+                const classificationScore = (penultimateAvg * 1 + finalAvg * 2) / 3;
+                const scoreDisplay = document.getElementById('final-classification-score');
+                const gradeDisplay = document.getElementById('final-classification-grade');
+                if (isNaN(classificationScore) || classificationScore === 0) {
+                    scoreDisplay.textContent = '0.00';
+                    gradeDisplay.textContent = '-';
+                    gradeDisplay.className = 'text-3xl font-bold';
                     return;
                 }
-                document.querySelectorAll('.course-card').forEach(updateCourseCalculations);
-                document.querySelectorAll('.semester-section').forEach(updateSemesterCalculations);
-                updateOverallCalculations();
+                scoreDisplay.textContent = classificationScore.toFixed(2);
+                let grade = '';
+                let gradeClass = '';
+                if (classificationScore >= 70) {
+                    grade = 'First Class Honours (1st)';
+                    gradeClass = 'score-1st';
+                } else if (classificationScore >= 60) {
+                    grade = 'Upper Second Class Honours (2:1)';
+                    gradeClass = 'score-2-1';
+                } else if (classificationScore >= 50) {
+                    grade = 'Lower Second Class Honours (2:2)';
+                    gradeClass = 'score-2-2';
+                } else if (classificationScore >= 40) {
+                    grade = 'Third Class Honours (3rd)';
+                    gradeClass = 'score-3rd';
+                } else {
+                    grade = 'Fail';
+                    gradeClass = 'score-fail';
+                }
+                gradeDisplay.textContent = grade;
+                gradeDisplay.className = `text-3xl font-bold ${gradeClass}`;
             }
 
-            function updateCourseCalculations(courseEl) {
-                const { semesterIndex, courseIndex } = courseEl.dataset;
-                const studentData = localStudentsData.find(s => s.id === selectedStudentId);
-                if (!studentData) return;
-                const courseData = studentData.semesters[semesterIndex].courses[courseIndex];
-                let totalWeight = 0, gradedWeight = 0, currentWeightedScore = 0;
-                courseData.assignments.forEach(a => {
-                    const weight = parseFloat(a.weight) || 0;
-                    totalWeight += weight;
-                    if (a.score !== '' && a.score !== null) {
-                        const score = parseFloat(a.score) || 0;
-                        const maxScore = parseFloat(a.maxScore) || 100;
-                        gradedWeight += weight;
-                        currentWeightedScore += (score / maxScore) * weight;
-                    }
-                });
-                const totalWeightDisplay = courseEl.querySelector('.total-weight-display');
-                totalWeightDisplay.textContent = `${totalWeight.toFixed(1)}%`;
-                totalWeightDisplay.style.color = totalWeight > 100.01 ? '#ef4444' : (Math.abs(totalWeight - 100) < 0.01 ? '#10b981' : '#6b7280');
-                
-                let finalGrade = 0;
-                if (gradedWeight > 0) {
-                    finalGrade = (currentWeightedScore / gradedWeight) * 100;
-                    courseEl.querySelector('.current-grade-display').textContent = `${finalGrade.toFixed(2)}`;
-                } else {
-                    courseEl.querySelector('.current-grade-display').textContent = 'N/A';
-                }
-                courseData.finalGrade = finalGrade;
-
-                const courseWeight = parseFloat(courseData.weight) || 0;
-                courseData.contributionScore = finalGrade > 0 ? (finalGrade * (courseWeight / 100)) : 0;
-            }
-
-            function updateSemesterCalculations(semesterEl) {
-                const { semesterIndex } = semesterEl.dataset;
-                const studentData = localStudentsData.find(s => s.id === selectedStudentId);
-                if (!studentData) return;
-                const semesterData = studentData.semesters[semesterIndex];
-                const isAverageMode = semesterData.calculationMode === 'average';
-                
-                let semesterCalculatedScore = 0;
-                let simpleAverageScoreSum = 0, gradedCoursesCount = 0;
-
-                semesterData.courses.forEach(course => {
-                    if (course.finalGrade !== undefined && course.finalGrade > 0) {
-                        simpleAverageScoreSum += course.finalGrade;
-                        gradedCoursesCount++;
-                    }
-                });
-
-                const scoreLabel = semesterEl.querySelector('.semester-score-label');
-                scoreLabel.textContent = isAverageMode ? '学期均分' : '学期加权分';
-                
-                const weightedScoreDisplay = semesterEl.querySelector('.semester-weighted-score-display');
-                const averageScoreDisplay = semesterEl.querySelector('.semester-average-score-display');
-                
-                if (isAverageMode) {
-                    semesterCalculatedScore = gradedCoursesCount > 0 ? simpleAverageScoreSum / gradedCoursesCount : 0;
-                } else {
-                    semesterData.courses.forEach(c => semesterCalculatedScore += parseFloat(c.contributionScore) || 0);
-                }
-
-                if (semesterCalculatedScore > 0) {
-                    weightedScoreDisplay.textContent = semesterCalculatedScore.toFixed(2);
-                    semesterData.semesterTotalScore = semesterCalculatedScore;
-                } else {
-                    weightedScoreDisplay.textContent = 'N/A';
-                    semesterData.semesterTotalScore = 0;
-                }
-
-                if (gradedCoursesCount > 0) {
-                    const simpleAverage = simpleAverageScoreSum / gradedCoursesCount;
-                    averageScoreDisplay.textContent = simpleAverage.toFixed(2);
-                } else {
-                    averageScoreDisplay.textContent = 'N/A';
-                }
-            }
-
-            function updateOverallCalculations() {
-                const studentData = localStudentsData.find(s => s.id === selectedStudentId);
-                if (!studentData || !Array.isArray(studentData.semesters)) {
-                    ui.overall.score.textContent = 'N/A';
-                    return;
-                }
-                
-                let overallScoreSum = 0, validSemestersForScore = 0;
-
-                studentData.semesters.forEach(semester => {
-                    const isAverageMode = semester.calculationMode === 'average';
-                    let semesterIsValidForOverallScore = true;
-                    let semesterTotalCourseWeight = 0;
-
-                    if (!isAverageMode) {
-                        semester.courses.forEach(course => {
-                            semesterTotalCourseWeight += (parseFloat(course.weight) || 0);
-                        });
-                        if (Math.abs(semesterTotalCourseWeight - 100) > 0.1) {
-                            semesterIsValidForOverallScore = false;
-                        }
-                    }
-                    
-                    if (semesterIsValidForOverallScore && semester.semesterTotalScore && semester.semesterTotalScore > 0) {
-                         overallScoreSum += semester.semesterTotalScore;
-                         validSemestersForScore++;
-                    }
-                });
-
-                if (validSemestersForScore > 0) {
-                    ui.overall.score.textContent = (overallScoreSum / validSemestersForScore).toFixed(2);
-                } else {
-                    ui.overall.score.textContent = 'N/A';
-                }
-            }
-
-            function updateCalendarEvents() {
-                if (!calendar) return;
-                const events = [];
-                const studentColors = ['#3b82f6', '#10b981', '#ef4444', '#f59e0b', '#8b5cf6', '#ec4899'];
-                localStudentsData.forEach((student, studentIndex) => {
-                    const studentColor = studentColors[studentIndex % studentColors.length];
-                    student.semesters?.forEach(semester => {
-                        semester.courses?.forEach(course => {
-                            course.assignments?.forEach(assignment => {
-                                if (assignment.deadline) {
-                                    events.push({
-                                        title: `${course.name}: ${assignment.name}`,
-                                        start: assignment.deadline, // FullCalendar can parse YYYY-MM-DDTHH:MM
-                                        allDay: false, // Set to false to show time
-                                        backgroundColor: studentColor,
-                                        borderColor: studentColor,
-                                        extendedProps: {
-                                            studentName: student.name
-                                        }
-                                    });
-                                }
-                            });
-                        });
-                    });
-                });
-                calendar.removeAllEvents();
-                calendar.addEventSource(events);
-            }
-
-            // Import/Export/Template Logic
-            const TEMPLATE_HEADERS = [ "学期", "课程名称", "学期总分权重(%)", "评分项目", "类型", "权重(%)", "得分", "满分", "截止时间" ];
-
-            ui.downloadTemplateBtn.addEventListener('click', (e) => {
-                e.preventDefault();
+            function downloadTemplate() {
+                const headers = ["Year", "Module Name", "Mark", "Credits", "Is Discovery Module"];
                 const sampleData = [
-                    { "学期": "2024-2025学年 第一学期", "课程名称": "计算机科学导论", "学期总分权重(%)": 30, "评分项目": "期中考试", "类型": "期中考试", "权重(%)": 40, "得分": 85, "满分": 100, "截止时间": "2025-10-25 14:30" },
-                    { "学期": "2024-2025学年 第一学期", "课程名称": "计算机科学导论", "学期总分权重(%)": 30, "评分项目": "期末项目", "类型": "项目", "权重(%)": 60, "得分": 92, "满分": 100, "截止时间": "2025-12-15 23:59" },
-                    { "学期": "2024-2025学年 第一学期", "课程名称": "高等数学", "学期总分权重(%)": 40, "评分项目": "平时作业1", "类型": "作业", "权重(%)": 10, "得分": 9, "满分": 10, "截止时间": "2025-09-30 18:00" },
+                    { "Year": "Penultimate", "Module Name": "例如: COMP2211", "Mark": 75, "Credits": 20, "Is Discovery Module": "No" },
+                    { "Year": "Penultimate", "Module Name": "例如: COMP2931", "Mark": 68, "Credits": 10, "Is Discovery Module": "No" },
+                    { "Year": "Final", "Module Name": "例如: COMP3211", "Mark": 80, "Credits": 40, "Is Discovery Module": "No" },
+                    { "Year": "Final", "Module Name": "例如: FOAH1000", "Mark": 72, "Credits": 10, "Is Discovery Module": "Yes" },
                 ];
-                const worksheet = XLSX.utils.json_to_sheet(sampleData, { header: TEMPLATE_HEADERS });
+                const worksheet = XLSX.utils.json_to_sheet(sampleData, { header: headers });
                 const workbook = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(workbook, worksheet, "成绩导入模板");
-                XLSX.writeFile(workbook, `grades_import_template.xlsx`);
-                showSuccess('模板下载成功！');
-            });
+                XLSX.utils.book_append_sheet(workbook, worksheet, "Leeds GPA Template");
+                XLSX.writeFile(workbook, `leeds_gpa_template.xlsx`);
+            }
 
-            ui.importBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                if (!selectedStudentId) {
-                    showError("请先选择一个学生以导入数据。");
-                    return;
-                }
-                ui.importFileInput.click();
-            });
-
-            ui.importFileInput.addEventListener('change', (event) => {
+            function handleImport(event) {
                 const file = event.target.files[0];
                 if (!file) return;
-
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     try {
                         const data = new Uint8Array(e.target.result);
-                        const workbook = XLSX.read(data, {type: 'array', cellDates:true});
+                        const workbook = XLSX.read(data, { type: 'array' });
                         const firstSheetName = workbook.SheetNames[0];
                         const worksheet = workbook.Sheets[firstSheetName];
                         const json = XLSX.utils.sheet_to_json(worksheet);
-
-                        const newSemesters = processImportedData(json);
-                        
-                        const studentName = localStudentsData.find(s => s.id === selectedStudentId)?.name;
-                        showConfirmModal(
-                            `确认导入数据`,
-                            `您确定要用上传文件中的数据覆盖学生 "${studentName}" 的现有数据吗？此操作无法撤销。`,
-                            () => {
-                                updateStudentData({ semesters: newSemesters });
-                                showSuccess("数据导入成功！日历已同步。");
-                            }
-                        );
-
+                        processImportedData(json);
                     } catch (err) {
-                        showError("文件处理失败", "请确保上传的是格式正确的 Excel 文件。错误: " + err.message);
+                        alert("文件处理失败，请确保文件格式正确。错误: " + err.message);
                     } finally {
                         event.target.value = '';
                     }
                 };
                 reader.onerror = () => {
-                        showError("无法读取文件。");
-                        event.target.value = '';
+                    alert("无法读取文件。");
+                    event.target.value = '';
                 };
                 reader.readAsArrayBuffer(file);
-            });
-
-            function excelDateToHtmlDateTime(date) {
-                if (!date) return '';
-                // Adjust for timezone offset to get local time
-                const tzoffset = date.getTimezoneOffset() * 60000; //offset in milliseconds
-                const localDate = new Date(date - tzoffset);
-                const localISOTime = localDate.toISOString().slice(0, 16);
-                return localISOTime;
             }
 
             function processImportedData(data) {
-                const semestersMap = new Map();
-
+                penultimateBody.innerHTML = '';
+                finalBody.innerHTML = '';
                 data.forEach(row => {
-                    const semesterName = row['学期'];
-                    const courseName = row['课程名称'];
-                    if (!semesterName || !courseName) return;
-
-                    if (!semestersMap.has(semesterName)) {
-                        semestersMap.set(semesterName, { name: semesterName, courses: new Map(), calculationMode: 'weighted' });
-                    }
-                    const semester = semestersMap.get(semesterName);
-
-                    if (!semester.courses.has(courseName)) {
-                        semester.courses.set(courseName, {
-                            name: courseName,
-                            weight: row['学期总分权重(%)'] || '0',
-                            assignments: []
-                        });
-                    }
-                    const course = semester.courses.get(courseName);
-
-                    if (row['评分项目']) {
-                        let deadline = row['截止时间'];
-                        let formattedDeadline = '';
-                        if (deadline instanceof Date) {
-                            formattedDeadline = excelDateToHtmlDateTime(deadline);
-                        } else if (typeof deadline === 'string') {
-                            // Handle strings like '2025-10-25 14:30' by replacing space with 'T'
-                            formattedDeadline = deadline.replace(' ', 'T');
-                        }
-
-                        course.assignments.push({
-                            name: row['评分项目'] || '',
-                            type: row['类型'] || '',
-                            weight: row['权重(%)'] === undefined ? '' : String(row['权重(%)']),
-                            score: row['得分'] === undefined ? '' : String(row['得分']),
-                            maxScore: row['满分'] === undefined ? '100' : String(row['满分']),
-                            deadline: formattedDeadline || ''
-                        });
+                    const moduleData = {
+                        name: row["Module Name"],
+                        mark: row["Mark"],
+                        credits: row["Credits"],
+                        isDiscovery: (row["Is Discovery Module"] || '').toLowerCase() === 'yes'
+                    };
+                    const year = (row["Year"] || '').toLowerCase();
+                    if (year.includes('penultimate')) {
+                        addModuleRow(penultimateBody, false, moduleData);
+                    } else if (year.includes('final')) {  
+                        addModuleRow(finalBody, true, moduleData);
                     }
                 });
-
-                return Array.from(semestersMap.values()).map(s => {  
-                    s.courses = Array.from(s.courses.values());
-                    return s;
-                });
+                calculateAll();
             }
 
-            // --- Menu Logic ---
-            function setupMenu(button, menu) {
-                 button.addEventListener('click', (e) => {
-                     e.stopPropagation();
-                     const isExpanded = button.getAttribute('aria-expanded') === 'true';
-                     button.setAttribute('aria-expanded', !isExpanded);
-                     menu.classList.toggle('hidden');
-                 });
-            }
-            
-            setupMenu(ui.userMenu.btn, ui.userMenu.options);
-
-            document.addEventListener('click', (event) => {
-                if (!ui.userMenu.btn.contains(event.target) && !ui.userMenu.options.contains(event.target)) {
-                    ui.userMenu.btn.setAttribute('aria-expanded', 'false');
-                    ui.userMenu.options.classList.add('hidden');
-                }
-            });
-
-            function downloadFile(content, fileName, mimeType) {
-                const a = document.createElement('a');
-                const blob = new Blob([content], { type: mimeType });
-                a.href = URL.createObjectURL(blob);
-                a.download = fileName;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(a.href);
-            }
-
-            function prepareExportData() {
-                const student = localStudentsData.find(s => s.id === selectedStudentId);
-                if (!student) {
-                    showError("没有选中的学生可导出。");
-                    return null;
-                }
-                
-                const flatData = [];
-                student.semesters.forEach(semester => {
-                    semester.courses.forEach(course => {
-                        if (course.assignments.length === 0) {
-                             flatData.push({
-                                 "学期": semester.name,
-                                 "课程名称": course.name,
-                                 "学期总分权重(%)": course.weight,
-                             });
-                        } else {
-                            course.assignments.forEach(assignment => {
-                                flatData.push({
-                                    "学期": semester.name,
-                                    "课程名称": course.name,
-                                    "学期总分权重(%)": course.weight,
-                                    "评分项目": assignment.name,
-                                    "类型": assignment.type,
-                                    "权重(%)": assignment.weight,
-                                    "得分": assignment.score,
-                                    "满分": assignment.maxScore,
-                                    "截止时间": (assignment.deadline || '').replace('T', ' ')
-                                });
-                            });
-                        }
-                    });
-                });
-                return { student, flatData };
-            }
-
-            ui.userMenu.exportXlsx.addEventListener('click', (e) => {
-                e.preventDefault();
-                const exportData = prepareExportData();
-                if (!exportData) return;
-                
-                const worksheet = XLSX.utils.json_to_sheet(exportData.flatData, { header: TEMPLATE_HEADERS });
-                const workbook = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(workbook, worksheet, exportData.student.name);
-                XLSX.writeFile(workbook, `${exportData.student.name}_成绩单.xlsx`);
-                showSuccess('Excel 文件导出成功！');
-            });
-
-            ui.userMenu.exportTxt.addEventListener('click', (e) => {
-                e.preventDefault();
-                const exportData = prepareExportData();
-                if (!exportData) return;
-
-                let content = `学生: ${exportData.student.name}\n`;
-                content += `导出日期: ${new Date().toLocaleDateString()}\n`;
-                content += "========================================\n\n";
-
-                exportData.student.semesters.forEach(semester => {
-                    content += `学期: ${semester.name} (计算模式: ${semester.calculationMode === 'average' ? '均分' : '加权'})\n`;
-                    content += "----------------------------------------\n";
-                    semester.courses.forEach(course => {
-                        content += `  课程: ${course.name} (学期权重: ${course.weight}%)\n`;
-                        course.assignments.forEach(a => {
-                            content += `    - ${a.name} (${a.type || 'N/A'}): 得分 ${a.score || '-'} / ${a.maxScore || '100'}, 权重 ${a.weight}%, DDL: ${(a.deadline || 'N/A').replace('T', ' ')}\n`;
-                        });
-                        content += "\n";
-                    });
-                });
-
-                downloadFile(content, `${exportData.student.name}_成绩单.txt`, 'text/plain;charset=utf-8');
-                showSuccess('TXT 文件导出成功！');
-            });
-
-            ui.userMenu.clearAllData.addEventListener('click', async (e) => {
-                e.preventDefault();
-                if (!currentUser) return;
-                showConfirmModal(
-                    '确认清空所有数据',
-                    '您确定要删除所有学生及其全部数据吗？此操作极其危险且无法撤销！',
-                    async () => {
-                        ui.loadingOverlay.style.display = 'flex';
-                        try {
-                            const studentsColRef = collection(db, 'users', currentUser.uid, 'students');
-                            const snapshot = await getDocs(studentsColRef);
-                            const batch = writeBatch(db);
-                            snapshot.docs.forEach(doc => {
-                                batch.delete(doc.ref);
-                            });
-                            await batch.commit();
-                            localStudentsData = [];
-                            selectedStudentId = null;
-                            renderSidebarStudentList();
-                            renderStudentContent();
-                            showSuccess('所有学生数据已清空。');
-                        } catch (err) {
-                            showError('清空数据失败', err.message);
-                        } finally {
-                            ui.loadingOverlay.style.display = 'none';
-                        }
-                    }
-                );
-            });
-
-
-        } catch (error) {
-            console.error("初始化失败:", error);
-            showError('应用初始化失败', error.message);
-            updateStatus('初始化失败，请刷新页面');
-        }
+            addModuleRow(penultimateBody, false);
+            addModuleRow(finalBody, true);
+        });
     </script>
 </body>
 </html>
