@@ -1,0 +1,127 @@
+<!-- 在您的HTML文件的 </body> 标签之前添加 -->
+
+<!-- 学位分类计算器子页面 -->
+<div id="degree-classification-view" class="max-w-7xl mx-auto" style="display: none;">
+    <header class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl md:text-4xl font-extrabold text-gray-800">学位分类计算器</h1>
+        <!-- 返回主页面的按钮 -->
+        <button id="back-to-main-btn" class="btn btn-secondary">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M9.707 14.707a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 1.414L7.414 9H15a1 1 0 110 2H7.414l2.293 2.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+            </svg>
+            返回主页面
+        </button>
+    </header>
+
+    <!-- 学生选择和规则说明 -->
+    <div class="card p-6 mb-8">
+        <div class="grid md:grid-cols-2 gap-6 items-end">
+            <div>
+                <label for="classification-student-select" class="block text-sm font-medium text-gray-600 mb-2">选择学生</label>
+                <select id="classification-student-select" class="form-input w-full p-2 rounded-md">
+                    <!-- 选项将由JavaScript动态填充 -->
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-600 mb-2">当前规则</label>
+                <div class="p-3 bg-blue-50 border border-blue-200 rounded-md">
+                    <span class="text-blue-800 text-sm font-medium">利兹大学本科分类规则</span>
+                </div>
+            </div>
+        </div>
+        <div class="mt-4 text-sm text-gray-500">
+            <p>本计算器适用于仅在倒数第二年和最后一年进行分类的本科课程。</p>
+            <p>计算结果仅供参考，最终学位等级由考试委员会决定。</p>
+        </div>
+    </div>
+
+    <!-- 计算器主体：两个学年表格 -->
+    <div class="grid md:grid-cols-2 gap-8 mb-8">
+        <!-- 倒数第二年 -->
+        <div class="card p-6">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">倒数第二年</h2>
+            <p class="text-sm text-gray-500 mb-4">（包括在最后一年修读的技能发现模块）</p>
+            <div class="overflow-x-auto">
+                <table id="penultimate-year-table" class="w-full text-left">
+                    <thead class="border-b-2 border-gray-200">
+                        <tr>
+                            <th class="p-3 text-sm font-semibold text-gray-500">课程/模块</th>
+                            <th class="p-3 text-sm font-semibold text-gray-500">学分</th>
+                            <th class="p-3 text-sm font-semibold text-gray-500">分数</th>
+                            <th class="p-3 text-sm font-semibold text-gray-500"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="penultimate-year-body">
+                        <!-- 行将由JavaScript动态添加 -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="mt-4">
+                <button id="add-penultimate-course" class="btn btn-secondary">+ 添加模块</button>
+            </div>
+            <div class="mt-6 p-4 bg-gray-50 rounded-lg">
+                <div class="flex justify-between">
+                    <span class="font-semibold">总学分:</span>
+                    <span id="penultimate-total-credits">0</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="font-semibold">平均分:</span>
+                    <span id="penultimate-average">N/A</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 最后一年 -->
+        <div class="card p-6">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">最后一年</h2>
+            <p class="text-sm text-gray-500 mb-4">（不包括技能发现模块）</p>
+            <div class="overflow-x-auto">
+                <table id="final-year-table" class="w-full text-left">
+                    <thead class="border-b-2 border-gray-200">
+                        <tr>
+                            <th class="p-3 text-sm font-semibold text-gray-500">课程/模块</th>
+                            <th class="p-3 text-sm font-semibold text-gray-500">学分</th>
+                            <th class="p-3 text-sm font-semibold text-gray-500">分数</th>
+                            <th class="p-3 text-sm font-semibold text-gray-500"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="final-year-body">
+                        <!-- 行将由JavaScript动态添加 -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="mt-4">
+                <button id="add-final-course" class="btn btn-secondary">+ 添加模块</button>
+            </div>
+            <div class="mt-6 p-4 bg-gray-50 rounded-lg">
+                <div class="flex justify-between">
+                    <span class="font-semibold">总学分:</span>
+                    <span id="final-total-credits">0</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="font-semibold">平均分:</span>
+                    <span id="final-average">N/A</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 最终结果展示 -->
+    <div class="card p-6">
+        <h2 class="text-xl font-bold text-gray-800 mb-4">最终结果</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div class="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
+                <div class="font-semibold text-gray-600">总体平均分</div>
+                <span id="overall-average" class="text-4xl font-extrabold text-green-600">N/A</span>
+            </div>
+            <div class="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
+                <div class="font-semibold text-gray-600">学位等级</div>
+                <span id="degree-classification" class="text-4xl font-extrabold text-blue-600">N/A</span>
+            </div>
+        </div>
+        <div class="mt-6 text-sm text-gray-500">
+            <p><strong>注意：</strong>距离边界0.5以内的分数会自动向上取整。</p>
+            <p>学位等级预测基于：倒数第二年 40% + 最后一年 60% 的权重计算。</p>
+        </div>
+    </div>
+</div>
