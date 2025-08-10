@@ -1098,8 +1098,9 @@
                 calendar.removeAllEvents();
                 calendar.addEventSource(events);
             }
+            
+            // --- REBUILT IMPORT/EXPORT LOGIC ---
 
-            // Import/Export/Template Logic
             const TEMPLATE_HEADERS = [ "学期", "课程名称", "学期总分权重(%)", "评分项目", "类型", "权重(%)", "得分", "满分", "截止时间" ];
 
             ui.downloadTemplateBtn.addEventListener('click', (e) => {
@@ -1125,61 +1126,89 @@
                 ui.importFileInput.click();
             });
 
-            ui.importFileInput.addEventListener('change', (event) => {
+            // New file reader function using Promises
+            function readFileAsArrayBuffer(file) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = () => reject(reader.error);
+                    reader.readAsArrayBuffer(file);
+                });
+            }
+            
+            // New robust date parsing function
+            function parseDate(value) {
+                if (!value) return '';
+                
+                // 1. If it's already a Date object
+                if (value instanceof Date) {
+                    const tzoffset = value.getTimezoneOffset() * 60000;
+                    return new Date(value - tzoffset).toISOString().slice(0, 16);
+                }
+                
+                // 2. If it's an Excel serial number
+                if (typeof value === 'number') {
+                    const excelEpoch = new Date(1899, 11, 30);
+                    const date = new Date(excelEpoch.getTime() + value * 86400000);
+                    const tzoffset = date.getTimezoneOffset() * 60000;
+                    return new Date(date.getTime() - tzoffset).toISOString().slice(0, 16);
+                }
+
+                // 3. If it's a string, try to parse it
+                if (typeof value === 'string') {
+                    const parsableString = value.replace(/\//g, '-').replace(' ', 'T');
+                    const date = new Date(parsableString);
+                    if (!isNaN(date)) {
+                        return date.toISOString().slice(0, 16);
+                    }
+                }
+                
+                console.warn(`Could not parse date: ${value}`);
+                return ''; // Return empty if all attempts fail
+            }
+
+
+            ui.importFileInput.addEventListener('change', async (event) => {
                 const file = event.target.files[0];
                 if (!file) return;
 
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    try {
-                        const data = new Uint8Array(e.target.result);
-                        const workbook = XLSX.read(data, {type: 'array', cellDates:true});
-                        const firstSheetName = workbook.SheetNames[0];
-                        const worksheet = workbook.Sheets[firstSheetName];
-                        const json = XLSX.utils.sheet_to_json(worksheet);
+                try {
+                    const arrayBuffer = await readFileAsArrayBuffer(file);
+                    const data = new Uint8Array(arrayBuffer);
+                    const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const json = XLSX.utils.sheet_to_json(worksheet);
 
-                        const newSemesters = processImportedData(json);
-                        
-                        const studentName = localStudentsData.find(s => s.id === selectedStudentId)?.name;
-                        showConfirmModal(
-                            `确认导入数据`,
-                            `您确定要用上传文件中的数据覆盖学生 "${studentName}" 的现有数据吗？此操作无法撤销。`,
-                            () => {
-                                updateStudentData({ semesters: newSemesters });
-                                showSuccess("数据导入成功！日历已同步。");
-                            }
-                        );
+                    const newSemesters = processImportedData(json);
+                    
+                    const studentName = localStudentsData.find(s => s.id === selectedStudentId)?.name;
+                    showConfirmModal(
+                        `确认导入数据`,
+                        `您确定要用上传文件中的数据覆盖学生 "${studentName}" 的现有数据吗？此操作无法撤销。`,
+                        () => {
+                            updateStudentData({ semesters: newSemesters });
+                            showSuccess("数据导入成功！日历已同步。");
+                        }
+                    );
 
-                    } catch (err) {
-                        showError("文件处理失败", "请确保上传的是格式正确的 Excel 文件。错误: " + err.message);
-                    } finally {
-                        event.target.value = '';
-                    }
-                };
-                reader.onerror = () => {
-                        showError("无法读取文件。");
-                        event.target.value = '';
-                };
-                reader.readAsArrayBuffer(file);
+                } catch (err) {
+                    showError("文件处理失败", "请确保上传的是格式正确的 Excel 文件。错误: " + err.message);
+                } finally {
+                    event.target.value = ''; // Reset file input
+                }
             });
 
-            function excelDateToHtmlDateTime(date) {
-                if (!date) return '';
-                // Adjust for timezone offset to get local time
-                const tzoffset = date.getTimezoneOffset() * 60000; //offset in milliseconds
-                const localDate = new Date(date - tzoffset);
-                const localISOTime = localDate.toISOString().slice(0, 16);
-                return localISOTime;
-            }
-
-            // MODIFIED: This function is now more robust in handling different date formats.
             function processImportedData(data) {
                 const semestersMap = new Map();
 
-                data.forEach(row => {
+                data.forEach((row, index) => {
                     const semesterName = row['学期'];
                     const courseName = row['课程名称'];
-                    if (!semesterName || !courseName) return;
+                    if (!semesterName || !courseName) {
+                        console.warn(`Skipping row ${index + 2} due to missing semester or course name.`);
+                        return;
+                    }
 
                     if (!semestersMap.has(semesterName)) {
                         semestersMap.set(semesterName, { name: semesterName, courses: new Map(), calculationMode: 'weighted' });
@@ -1196,27 +1225,7 @@
                     const course = semester.courses.get(courseName);
 
                     if (row['评分项目']) {
-                        let deadline = row['截止时间'];
-                        let formattedDeadline = '';
-                        
-                        // Case 1: The library correctly parsed it as a JS Date object.
-                        if (deadline instanceof Date) {
-                            formattedDeadline = excelDateToHtmlDateTime(deadline);
-                        } 
-                        // Case 2: It's an Excel serial number (a number).
-                        else if (typeof deadline === 'number') {
-                            // 25569 is the day difference between Excel's epoch (1900) and Unix's (1970)
-                            const jsDate = new Date((deadline - 25569) * 86400 * 1000);
-                            formattedDeadline = excelDateToHtmlDateTime(jsDate);
-                        }
-                        // Case 3: It's a string that we try to parse.
-                        else if (typeof deadline === 'string') {
-                            // Handles formats like '2025-10-25 14:30' or '2025/10/25 14:30'
-                            const parsableString = deadline.replace(' ', 'T').replace('/', '-');
-                            if (!isNaN(new Date(parsableString))) {
-                               formattedDeadline = new Date(parsableString).toISOString().slice(0, 16);
-                            }
-                        }
+                        const formattedDeadline = parseDate(row['截止时间']);
 
                         course.assignments.push({
                             name: row['评分项目'] || '',
@@ -1224,7 +1233,7 @@
                             weight: row['权重(%)'] === undefined ? '' : String(row['权重(%)']),
                             score: row['得分'] === undefined ? '' : String(row['得分']),
                             maxScore: row['满分'] === undefined ? '100' : String(row['满分']),
-                            deadline: formattedDeadline || ''
+                            deadline: formattedDeadline
                         });
                     }
                 });
@@ -1233,36 +1242,6 @@
                     s.courses = Array.from(s.courses.values());
                     return s;
                 });
-            }
-
-            // --- Menu Logic ---
-            function setupMenu(button, menu) {
-                 button.addEventListener('click', (e) => {
-                     e.stopPropagation();
-                     const isExpanded = button.getAttribute('aria-expanded') === 'true';
-                     button.setAttribute('aria-expanded', !isExpanded);
-                     menu.classList.toggle('hidden');
-                 });
-            }
-            
-            setupMenu(ui.userMenu.btn, ui.userMenu.options);
-
-            document.addEventListener('click', (event) => {
-                if (!ui.userMenu.btn.contains(event.target) && !ui.userMenu.options.contains(event.target)) {
-                    ui.userMenu.btn.setAttribute('aria-expanded', 'false');
-                    ui.userMenu.options.classList.add('hidden');
-                }
-            });
-
-            function downloadFile(content, fileName, mimeType) {
-                const a = document.createElement('a');
-                const blob = new Blob([content], { type: mimeType });
-                a.href = URL.createObjectURL(blob);
-                a.download = fileName;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(a.href);
             }
 
             function prepareExportData() {
