@@ -1172,6 +1172,7 @@
                 return localISOTime;
             }
 
+            // MODIFIED: This function is now more robust in handling different date formats.
             function processImportedData(data) {
                 const semestersMap = new Map();
 
@@ -1197,11 +1198,24 @@
                     if (row['评分项目']) {
                         let deadline = row['截止时间'];
                         let formattedDeadline = '';
+                        
+                        // Case 1: The library correctly parsed it as a JS Date object.
                         if (deadline instanceof Date) {
                             formattedDeadline = excelDateToHtmlDateTime(deadline);
-                        } else if (typeof deadline === 'string') {
-                            // Handle strings like '2025-10-25 14:30' by replacing space with 'T'
-                            formattedDeadline = deadline.replace(' ', 'T');
+                        } 
+                        // Case 2: It's an Excel serial number (a number).
+                        else if (typeof deadline === 'number') {
+                            // 25569 is the day difference between Excel's epoch (1900) and Unix's (1970)
+                            const jsDate = new Date((deadline - 25569) * 86400 * 1000);
+                            formattedDeadline = excelDateToHtmlDateTime(jsDate);
+                        }
+                        // Case 3: It's a string that we try to parse.
+                        else if (typeof deadline === 'string') {
+                            // Handles formats like '2025-10-25 14:30' or '2025/10/25 14:30'
+                            const parsableString = deadline.replace(' ', 'T').replace('/', '-');
+                            if (!isNaN(new Date(parsableString))) {
+                               formattedDeadline = new Date(parsableString).toISOString().slice(0, 16);
+                            }
                         }
 
                         course.assignments.push({
@@ -1348,7 +1362,7 @@
                         } catch (err) {
                             showError('清空数据失败', err.message);
                         } finally {
-                            ui.loadingOverlay.style.display = 'none';  
+                            ui.loadingOverlay.style.display = 'none';
                         }
                     }
                 );
