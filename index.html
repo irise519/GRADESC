@@ -1025,8 +1025,15 @@
                 calendar.addEventSource(events);
             }
 
-            // Import/Export/Template Logic
-            // --- Export Logic Implementation ---  
+            // Import/Export/Template Logic  
+ui.downloadTemplateBtn.addEventListener('click', () => {
+    const link = document.createElement('a');
+    link.href = './template.xlsx';
+    link.download = 'GRADESC成绩导入模板.xlsx';
+    link.click();
+});
+
+// --- Export Logic Implementation ---
 // 为导出菜单按钮添加点击事件，用于显示/隐藏下拉菜单
 ui.exportMenuBtn.addEventListener('click', (e) => {
     e.stopPropagation(); // 阻止事件冒泡，防止被document的点击监听器立即关闭
@@ -1036,7 +1043,7 @@ ui.exportMenuBtn.addEventListener('click', (e) => {
 // 点击页面其他地方时，关闭导出菜单
 document.addEventListener('click', (e) => {
     if (!ui.exportMenuBtn.contains(e.target) && !ui.exportMenuOptions.contains(e.target)) {
-        ui.exportMenuOptions.classList.add('hidden');  
+        ui.exportMenuOptions.classList.add('hidden');
     }
 });
 
@@ -1159,6 +1166,7 @@ document.getElementById('export-txt').addEventListener('click', (e) => {
 //         }
 //     });
 // });
+            
             const TEMPLATE_HEADERS = [ "学期", "课程名称", "学期总分权重(%)", "评分项目", "类型", "权重(%)", "得分", "满分", "截止日期" ];
 
             ui.downloadTemplateBtn.addEventListener('click', () => {  
