@@ -1135,6 +1135,115 @@
             }
 
             // ... Export Logic ...
+            // --- Export Logic Implementation ---
+// 假设您已经导入了 xlsx 库 (您的代码中已有 <script src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'></script>)
+
+// 为导出菜单选项添加事件监听器
+ui.exportMenu.btn.addEventListener('click', (e) => {
+    // 点击“导出”主按钮时，切换下拉菜单的显示/隐藏
+    ui.exportMenu.options.classList.toggle('hidden');
+});
+
+// 点击菜单外部时隐藏菜单
+document.addEventListener('click', (e) => {
+    if (!ui.exportMenu.btn.contains(e.target) && !ui.exportMenu.options.contains(e.target)) {
+        ui.exportMenu.options.classList.add('hidden');
+    }
+});
+
+// 实现导出为 Excel 的功能
+document.getElementById('export-xlsx').addEventListener('click', (e) => {
+    e.preventDefault(); // 阻止默认的跳转行为
+    ui.exportMenu.options.classList.add('hidden'); // 点击后隐藏菜单
+    
+    if (!selectedStudentId || !currentUser) {
+        showError('无法导出', '请先选择一个学生。');
+        return;
+    }
+
+    const studentData = localStudentsData.find(s => s.id === selectedStudentId);
+    if (!studentData) return;
+
+    try {
+        const exportData = [];
+
+        // 遍历每个学期
+        studentData.semesters.forEach(semester => {
+            // 遍历该学期的每门课程
+            semester.courses.forEach(course => {
+                // 遍历该课程的每个评分项目
+                course.assignments.forEach(assignment => {
+                    exportData.push({
+                        "学期": semester.name,
+                        "课程名称": course.name,
+                        "学期总分权重(%)": course.weight,
+                        "评分项目": assignment.name,
+                        "类型": assignment.type,
+                        "权重(%)": assignment.weight,
+                        "得分": assignment.score,
+                        "满分": assignment.maxScore,
+                        "截止日期": assignment.deadline
+                    });
+                });
+            });
+        });
+
+        // 使用 xlsx 库创建工作表和工作簿
+        const worksheet = XLSX.utils.json_to_sheet(exportData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, `${studentData.name}的成绩`);  
+
+        // 生成文件名
+        const fileName = `${studentData.name}_成绩_${new Date().toISOString().slice(0, 10)}.xlsx`;
+
+        // 触发下载
+        XLSX.writeFile(workbook, fileName);
+        showSuccess('数据导出成功！');
+    } catch (error) {
+        showError('导出失败', error.message);
+    }
+});
+
+// --- 您可以按照同样的模式实现 TXT 和 DOC 导出 ---
+// 例如，导出为 TXT
+document.getElementById('export-txt').addEventListener('click', (e) => {
+    e.preventDefault();
+    ui.exportMenu.options.classList.add('hidden');
+    
+    if (!selectedStudentId || !currentUser) {
+        showError('无法导出', '请先选择一个学生。');
+        return;
+    }
+
+    const studentData = localStudentsData.find(s => s.id === selectedStudentId);
+    if (!studentData) return;
+
+    try {
+        let txtContent = `学生姓名: ${studentData.name}\n\n`;
+
+        studentData.semesters.forEach(semester => {
+            txtContent += `=== ${semester.name} ===\n`;
+            semester.courses.forEach(course => {
+                txtContent += `  课程: ${course.name} (权重: ${course.weight}%)\n`;
+                course.assignments.forEach(assignment => {
+                    txtContent += `    - ${assignment.name} [${assignment.type}]: ${assignment.score}/${assignment.maxScore} (权重: ${assignment.weight}%) 截止: ${assignment.deadline}\n`;
+                });
+            });
+            txtContent += '\n';
+        });
+
+        const blob = new Blob([txtContent], { type: 'text/plain;charset=utf-8' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `${studentData.name}_成绩_${new Date().toISOString().slice(0, 10)}.txt`;
+        link.click();
+        URL.revokeObjectURL(link.href);
+        showSuccess('数据导出成功！');
+    } catch (error) {
+        showError('导出失败', error.message);
+    }
+});
+
 
         } catch (error) {
             console.error("初始化失败:", error);
