@@ -123,7 +123,7 @@
                 <div class="flex items-center">
                     <button id="sidebar-toggle" class="md:hidden mr-4 p-2 rounded-md hover:bg-gray-200">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
                         </svg>
                     </button>
                     <h1 class="text-3xl md:text-4xl font-extrabold text-gray-800">分数计算与统计</h1>
@@ -131,7 +131,6 @@
                 <div id="user-profile" class="flex items-center space-x-2 md:space-x-4 mt-4 md:mt-0">
                     <img id="user-avatar" class="w-10 h-10 rounded-full" src="" alt="User Avatar">
                     <span id="user-name" class="font-semibold text-gray-700"></span>
-                    <!-- MODIFIED: Changed help button to a link -->
                     <a href="./help.html" target="_blank" id="help-btn" class="btn btn-secondary">帮助</a>
                     <input type="file" id="import-file-input" class="hidden" accept=".xlsx, .xls">
                     <button id="import-btn" class="btn btn-success">导入</button>
@@ -320,7 +319,7 @@
                         <h3 class="text-md font-semibold text-gray-600">当前课程总分:</h3>
                         <p class="current-grade-display text-2xl font-bold text-blue-600">N/A</p>
                     </div>
-                    <div class="flex justify-between items-center">
+                     <div class="flex justify-between items-center">
                         <h3 class="text-md font-semibold text-gray-600">对学期总分贡献:</h3>
                         <p class="contribution-score-display text-2xl font-bold text-purple-600">N/A</p>
                     </div>
@@ -404,7 +403,7 @@
         try {
             const { initializeApp } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js");
             const { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js");
-            const { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, query, orderBy, getDocs } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+            const { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, query, orderBy, getDocs, writeBatch } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
             
             const firebaseConfig = {
                 apiKey: "AIzaSyBgYSM_HCYqUSvIN5VifHbX-j9p6IjhVJs",
@@ -460,6 +459,10 @@
                 exportMenu: {
                     btn: document.getElementById('export-menu-btn'),
                     options: document.getElementById('export-menu-options'),
+                    exportTxt: document.getElementById('export-txt'),
+                    exportDoc: document.getElementById('export-doc'),
+                    exportXlsx: document.getElementById('export-xlsx'),
+                    clearAllData: document.getElementById('clear-all-data'),
                 }
             };
 
@@ -557,6 +560,9 @@
                         selectedStudentId = localStudentsData[0].id;
                     } else if (localStudentsData.length === 0) {
                         selectedStudentId = null;
+                    } else if (selectedStudentId && !localStudentsData.some(s => s.id === selectedStudentId)) {
+                        // If the selected student was deleted, select the first one or null
+                        selectedStudentId = localStudentsData.length > 0 ? localStudentsData[0].id : null;
                     }
 
                     renderSidebarStudentList();
@@ -590,7 +596,7 @@
                     selectedStudentId = link.dataset.id;
                     renderSidebarStudentList();
                     renderStudentContent();
-                    if (window.innerWidth < 768) {
+                    if (window.innerWidth < 768) { // On mobile, close sidebar after selection
                          ui.sidebar.classList.add('-translate-x-full');
                     }
                 }
@@ -605,7 +611,7 @@
                 ui.currentStudentNameSummary.textContent = student ? student.name : '未选择学生';
 
                 if (!student) {
-                    updateAllCalculations();
+                    updateAllCalculations(); // This will clear the overall summary
                     return;
                 };
                 
@@ -619,10 +625,12 @@
                 }
                 ui.studentContentContainer.appendChild(studentContent);
                 updateAllCalculations();
+                // Restore focus after re-render
                 if (activeElPath) {
                     const newActiveEl = findElementByPath(activeElPath);
                     if (newActiveEl) {
                         newActiveEl.focus();
+                        // Restore cursor position for input fields
                         if (activeEl.tagName === 'INPUT' && typeof activeEl.selectionStart === 'number') {
                             newActiveEl.selectionStart = activeEl.selectionStart;
                             newActiveEl.selectionEnd = activeEl.selectionEnd;
@@ -640,7 +648,13 @@
                     const parent = current.parentElement;
                     if (!parent) break;
                     const index = Array.from(parent.children).indexOf(current);
-                    const part = { tag: current.tagName, index: index, className: current.className, dataset: { ...current.dataset } };
+                    // Use a more specific selector if possible
+                    const part = { 
+                        tag: current.tagName, 
+                        index: index, 
+                        className: current.className, // Using className for better matching
+                        dataset: { ...current.dataset } // Using data attributes for robust matching
+                    };
                     path.unshift(part);
                     current = parent;
                 }
@@ -652,6 +666,7 @@
                 for (const part of path) {
                     if (!current) return null;
                     const children = Array.from(current.children);
+                    // Try to find a more precise match first
                     let found = false;
                     for(let i = 0; i < children.length; i++) {
                         const child = children[i];
@@ -661,6 +676,7 @@
                             break;
                         }
                     }
+                    // Fallback to index if specific match fails
                     if(!found) { current = children[part.index]; }
                 }
                 return current;
@@ -672,6 +688,7 @@
                 const semesterEl = semesterTemplate.querySelector('.semester-section');
                 semesterEl.dataset.semesterIndex = semesterIndex;
                 if (!semesterData.name) {
+                    // Auto-generate semester name logic
                     let nextYear = new Date().getFullYear();
                     let semesterNum = 1;
                     if (semesterIndex > 0) {
@@ -755,7 +772,7 @@
                 const newStudent = { name: name, semesters: [{ name: '', courses: [] }] };
                 try {
                     const docRef = await addDoc(collection(db, 'users', currentUser.uid, 'students'), newStudent);
-                    selectedStudentId = docRef.id;
+                    selectedStudentId = docRef.id; // Switch to the new student
                     nameInput.value = '';
                     showSuccess('学生添加成功！');
                 } catch (e) { showError('添加学生失败', e.message); }
@@ -770,7 +787,7 @@
                     async () => {
                         try {
                             await deleteDoc(doc(db, 'users', currentUser.uid, 'students', selectedStudentId));
-                            selectedStudentId = null;
+                            selectedStudentId = null; // Reset selection
                             showSuccess('学生删除成功！');
                         } catch (e) { showError('删除学生失败', e.message); }
                     }
@@ -824,7 +841,8 @@
                 }
             });
 
-            ui.studentContentContainer.addEventListener('change', (e) => {
+            // Use 'input' event for real-time updates instead of 'change'
+            ui.studentContentContainer.addEventListener('input', (e) => {
                 if (!selectedStudentId) return;
                 const target = e.target;
                 if (!target.closest('.semester-section')) return;
@@ -963,6 +981,7 @@
                         semesterTotalCourseWeight += weight;
                     });
                     
+                    // Only include semester score in average if its courses' weights sum to 100
                     if (Math.abs(semesterTotalCourseWeight - 100) < 0.1 && semester.semesterTotalScore && semester.semesterTotalScore > 0) {
                          overallScoreSum += semester.semesterTotalScore;
                          validSemestersForScore++;
@@ -1081,8 +1100,8 @@
                     }
                 };
                 reader.onerror = () => {
-                     showError("无法读取文件。");
-                     event.target.value = '';
+                       showError("无法读取文件。");
+                       event.target.value = '';
                 };
                 reader.readAsArrayBuffer(file);
             });
@@ -1111,6 +1130,7 @@
 
                     if (row['评分项目']) {
                         let deadline = row['截止日期'];
+                        // Handle Excel date serial number format
                         if (typeof deadline === 'number') {
                            deadline = new Date(Math.round((deadline - 25569) * 86400 * 1000)).toISOString().split('T')[0];
                         } else if (deadline instanceof Date) {
@@ -1128,13 +1148,175 @@
                     }
                 });
 
-                return Array.from(semestersMap.values()).map(s => {  
+                return Array.from(semestersMap.values()).map(s => {  
                     s.courses = Array.from(s.courses.values());
                     return s;
                 });
             }
 
-            // ... Export Logic ...
+            // --- NEW/FIXED EXPORT LOGIC ---
+            
+            // Toggle export menu
+            ui.exportMenu.btn.addEventListener('click', () => {
+                const isExpanded = ui.exportMenu.btn.getAttribute('aria-expanded') === 'true';
+                ui.exportMenu.btn.setAttribute('aria-expanded', !isExpanded);
+                ui.exportMenu.options.classList.toggle('hidden');
+            });
+            
+            // Close menu if clicking outside
+            document.addEventListener('click', (event) => {
+                if (!ui.exportMenu.btn.contains(event.target) && !ui.exportMenu.options.contains(event.target)) {
+                    ui.exportMenu.btn.setAttribute('aria-expanded', 'false');
+                    ui.exportMenu.options.classList.add('hidden');
+                }
+            });
+
+            function downloadFile(content, fileName, mimeType) {
+                const a = document.createElement('a');
+                const blob = new Blob([content], { type: mimeType });
+                a.href = URL.createObjectURL(blob);
+                a.download = fileName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(a.href);
+            }
+
+            function prepareExportData() {
+                const student = localStudentsData.find(s => s.id === selectedStudentId);
+                if (!student) {
+                    showError("没有选中的学生可导出。");
+                    return null;
+                }
+                
+                const flatData = [];
+                student.semesters.forEach(semester => {
+                    semester.courses.forEach(course => {
+                        if (course.assignments.length === 0) {
+                             flatData.push({
+                                "学期": semester.name,
+                                "课程名称": course.name,
+                                "学期总分权重(%)": course.weight,
+                            });
+                        } else {
+                            course.assignments.forEach(assignment => {
+                                flatData.push({
+                                    "学期": semester.name,
+                                    "课程名称": course.name,
+                                    "学期总分权重(%)": course.weight,
+                                    "评分项目": assignment.name,
+                                    "类型": assignment.type,
+                                    "权重(%)": assignment.weight,
+                                    "得分": assignment.score,
+                                    "满分": assignment.maxScore,
+                                    "截止日期": assignment.deadline
+                                });
+                            });
+                        }
+                    });
+                });
+                return { student, flatData };
+            }
+
+            ui.exportMenu.exportXlsx.addEventListener('click', (e) => {
+                e.preventDefault();
+                const exportData = prepareExportData();
+                if (!exportData) return;
+                
+                const worksheet = XLSX.utils.json_to_sheet(exportData.flatData, { header: TEMPLATE_HEADERS });
+                const workbook = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(workbook, worksheet, exportData.student.name);
+                XLSX.writeFile(workbook, `${exportData.student.name}_成绩单.xlsx`);
+                showSuccess('Excel 文件导出成功！');
+            });
+
+            ui.exportMenu.exportTxt.addEventListener('click', (e) => {
+                e.preventDefault();
+                const exportData = prepareExportData();
+                if (!exportData) return;
+
+                let content = `学生: ${exportData.student.name}\n`;
+                content += `导出日期: ${new Date().toLocaleDateString()}\n`;
+                content += "========================================\n\n";
+
+                exportData.student.semesters.forEach(semester => {
+                    content += `学期: ${semester.name}\n`;
+                    content += "----------------------------------------\n";
+                    semester.courses.forEach(course => {
+                        content += `  课程: ${course.name} (学期权重: ${course.weight}%)\n`;
+                        course.assignments.forEach(a => {
+                            content += `    - ${a.name} (${a.type || 'N/A'}): 得分 ${a.score || '-'} / ${a.maxScore || '100'}, 权重 ${a.weight}%, DDL: ${a.deadline || 'N/A'}\n`;
+                        });
+                        content += "\n";
+                    });
+                });
+
+                downloadFile(content, `${exportData.student.name}_成绩单.txt`, 'text/plain;charset=utf-8');
+                showSuccess('TXT 文件导出成功！');
+            });
+
+            ui.exportMenu.exportDoc.addEventListener('click', (e) => {
+                e.preventDefault();
+                const exportData = prepareExportData();
+                if (!exportData) return;
+
+                let content = `<h1>学生: ${exportData.student.name}</h1>`;
+                content += `<p>导出日期: ${new Date().toLocaleDateString()}</p>`;
+                content += "<hr>";
+
+                exportData.student.semesters.forEach(semester => {
+                    content += `<h2>学期: ${semester.name}</h2>`;
+                    semester.courses.forEach(course => {
+                        content += `<h3>课程: ${course.name} (学期权重: ${course.weight}%)</h3>`;
+                        content += '<ul>';
+                        course.assignments.forEach(a => {
+                            content += `<li>${a.name} (${a.type || 'N/A'}): 得分 ${a.score || '-'} / ${a.maxScore || '100'}, 权重 ${a.weight}%, DDL: ${a.deadline || 'N/A'}</li>`;
+                        });
+                        content += '</ul>';
+                    });
+                });
+                
+                const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' " +
+                    "xmlns:w='urn:schemas-microsoft-com:office:word' " +
+                    "xmlns='http://www.w3.org/TR/REC-html40'>" +
+                    "<head><meta charset='utf-8'><title>成绩单</title></head><body>";
+                const footer = "</body></html>";
+                const sourceHTML = header + content + footer;
+
+                downloadFile(sourceHTML, `${exportData.student.name}_成绩单.doc`, 'application/msword');
+                showSuccess('DOC 文件导出成功！');
+            });
+
+            ui.exportMenu.clearAllData.addEventListener('click', async (e) => {
+                e.preventDefault();
+                if (!currentUser) return;
+                showConfirmModal(
+                    '确认清空所有数据',
+                    '您确定要删除所有学生及其全部数据吗？此操作极其危险且无法撤销！',
+                    async () => {
+                        ui.loadingOverlay.style.display = 'flex';
+                        try {
+                            const studentsColRef = collection(db, 'users', currentUser.uid, 'students');
+                            const snapshot = await getDocs(studentsColRef);
+                            const batch = writeBatch(db);
+                            snapshot.docs.forEach(doc => {
+                                batch.delete(doc.ref);
+                            });
+                            await batch.commit();
+                            localStudentsData = [];
+                            selectedStudentId = null;
+                            renderSidebarStudentList();
+                            renderStudentContent();
+                            showSuccess('所有学生数据已清空。');
+                        } catch (err) {
+                            showError('清空数据失败', err.message);
+                        } finally {
+                            ui.loadingOverlay.style.display = 'none';  
+                        }
+                    }
+                );
+            });
+
 
         } catch (error) {
             console.error("初始化失败:", error);
